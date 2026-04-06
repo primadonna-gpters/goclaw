@@ -46,8 +46,8 @@ type Channel struct {
 	lastQRMu        sync.RWMutex
 	lastQRB64       string     // base64-encoded PNG, empty when authenticated
 	waAuthenticated bool       // true once WhatsApp account is connected
-	myJID           types.JID  // bot's phone JID for mention detection
-	myLID           types.JID  // bot's Link ID (LID) — WhatsApp's newer identifier
+	myJID           types.JID  // linked account's phone JID for mention detection
+	myLID           types.JID  // linked account's LID — WhatsApp's newer identifier
 
 	// typingCancel tracks active typing-refresh loops per chatID.
 	typingCancel sync.Map // chatID string → context.CancelFunc
@@ -292,7 +292,7 @@ func (c *Channel) handleIncomingMessage(evt *events.Message) {
 	// Mention detection (group only).
 	if peerKind == "group" && c.config.RequireMention != nil && *c.config.RequireMention {
 		if !c.isMentioned(evt) {
-			slog.Info("whatsapp group message skipped — bot not @mentioned", "sender_id", senderID)
+			slog.Info("whatsapp group message skipped — not @mentioned", "sender_id", senderID)
 			return
 		}
 	}
@@ -386,7 +386,7 @@ func extractTextContent(msg *waE2E.Message) string {
 	return ""
 }
 
-// isMentioned checks if the bot is @mentioned in a group message.
+// isMentioned checks if the linked account is @mentioned in a group message.
 // WhatsApp uses dual identity: phone JID and LID. Mentions may use either format.
 func (c *Channel) isMentioned(evt *events.Message) bool {
 	c.lastQRMu.RLock()
@@ -851,7 +851,7 @@ func (c *Channel) sendPairingReply(ctx context.Context, senderID, chatID string)
 	}
 
 	replyText := fmt.Sprintf(
-		"GoClaw: access not configured.\n\nYour WhatsApp ID: %s\n\nPairing code: %s\n\nAsk the bot owner to approve with:\n  goclaw pairing approve %s",
+		"GoClaw: access not configured.\n\nYour WhatsApp ID: %s\n\nPairing code: %s\n\nAsk the account owner to approve with:\n  goclaw pairing approve %s",
 		senderID, code, code,
 	)
 
