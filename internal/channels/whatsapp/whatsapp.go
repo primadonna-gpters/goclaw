@@ -2,6 +2,7 @@ package whatsapp
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -10,11 +11,14 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	qrcode "github.com/skip2/go-qrcode"
 
 	"github.com/nextlevelbuilder/goclaw/internal/bus"
 	"github.com/nextlevelbuilder/goclaw/internal/channels"
+	"github.com/nextlevelbuilder/goclaw/internal/channels/media"
 	"github.com/nextlevelbuilder/goclaw/internal/config"
 	"github.com/nextlevelbuilder/goclaw/internal/store"
+	"github.com/nextlevelbuilder/goclaw/pkg/protocol"
 )
 
 const pairingDebounceTime = 60 * time.Second
@@ -33,6 +37,31 @@ type Channel struct {
 	pairingService  store.PairingStore
 	pairingDebounce sync.Map // senderID → time.Time
 	approvedGroups  sync.Map // chatID → true (in-memory cache for paired groups)
+
+	// QR caching: last QR PNG from the bridge (base64) for wizard delivery.
+	lastQRMu        sync.RWMutex
+	lastQRB64       string // base64-encoded PNG, empty when bridge is already authenticated
+	waAuthenticated bool   // true once bridge reports WhatsApp account is connected
+	myJID           string // bot's own WhatsApp JID (set from bridge status, used for mention detection)
+
+	// typingCancel tracks active typing-refresh loops per chatID.
+	// WhatsApp clears "composing" after ~10s, so we refresh every 8s until the reply is sent.
+	typingCancel sync.Map // chatID → context.CancelFunc
+}
+
+// GetLastQRB64 returns the most recent QR PNG (base64) received from the bridge.
+// Returns "" when the bridge is already authenticated or no QR has been received yet.
+func (c *Channel) GetLastQRB64() string {
+	c.lastQRMu.RLock()
+	defer c.lastQRMu.RUnlock()
+	return c.lastQRB64
+}
+
+// IsAuthenticated reports whether the WhatsApp account is currently authenticated via the bridge.
+func (c *Channel) IsAuthenticated() bool {
+	c.lastQRMu.RLock()
+	defer c.lastQRMu.RUnlock()
+	return c.waAuthenticated
 }
 
 // New creates a new WhatsApp channel from config.
@@ -54,12 +83,14 @@ func New(cfg config.WhatsAppConfig, msgBus *bus.MessageBus, pairingSvc store.Pai
 // Start connects to the WhatsApp bridge WebSocket and begins listening.
 func (c *Channel) Start(ctx context.Context) error {
 	slog.Info("starting whatsapp channel", "bridge_url", c.config.BridgeURL)
+	c.MarkStarting("Connecting to WhatsApp bridge")
 
 	c.ctx, c.cancel = context.WithCancel(ctx)
 
 	if err := c.connect(); err != nil {
-		// Don't fail hard — reconnect loop will keep trying
+		// Don't fail hard — reconnect loop will keep trying.
 		slog.Warn("initial whatsapp bridge connection failed, will retry", "error", err)
+		c.MarkDegraded("Bridge unreachable", err.Error(), channels.ChannelFailureKindNetwork, true)
 	}
 
 	go c.listenLoop()
@@ -89,7 +120,39 @@ func (c *Channel) Stop(_ context.Context) error {
 	c.connected = false
 	c.SetRunning(false)
 
+	// Cancel all active typing goroutines to prevent leaks.
+	c.typingCancel.Range(func(key, value any) bool {
+		value.(context.CancelFunc)()
+		c.typingCancel.Delete(key)
+		return true
+	})
+
+	c.MarkStopped("Stopped")
+
 	return nil
+}
+
+// SendBridgeCommand sends a control command to the bridge (e.g. reauth, ping, pairing_code).
+// Extra optional fields are merged into the command payload.
+// Bridge protocol: { type: "command", action: "<action>", ...extra }
+func (c *Channel) SendBridgeCommand(action string, extra ...map[string]any) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.conn == nil {
+		return fmt.Errorf("whatsapp bridge not connected")
+	}
+	payload := map[string]any{"type": "command", "action": action}
+	for _, e := range extra {
+		for k, v := range e {
+			payload[k] = v
+		}
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	return c.conn.WriteMessage(websocket.TextMessage, data)
 }
 
 // Send delivers an outbound message to the WhatsApp bridge.
@@ -104,7 +167,7 @@ func (c *Channel) Send(_ context.Context, msg bus.OutboundMessage) error {
 	payload := map[string]any{
 		"type":    "message",
 		"to":      msg.ChatID,
-		"content": msg.Content,
+		"content": markdownToWhatsApp(msg.Content),
 	}
 
 	data, err := json.Marshal(payload)
@@ -116,7 +179,37 @@ func (c *Channel) Send(_ context.Context, msg bus.OutboundMessage) error {
 		return fmt.Errorf("send whatsapp message: %w", err)
 	}
 
+	// Stop typing loop synchronously, then send "paused" after releasing the lock.
+	chatID := msg.ChatID
+	if cancel, ok := c.typingCancel.LoadAndDelete(chatID); ok {
+		cancel.(context.CancelFunc)()
+	}
+	go c.sendPresence(chatID, "paused")
+
 	return nil
+}
+
+// keepTyping sends "composing" presence repeatedly until ctx is cancelled.
+// WhatsApp clears the typing indicator after ~10s so we refresh every 8s.
+func (c *Channel) keepTyping(ctx context.Context, chatID string) {
+	c.sendPresence(chatID, "composing")
+	ticker := time.NewTicker(8 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			c.sendPresence(chatID, "composing")
+		}
+	}
+}
+
+// sendPresence sends a WhatsApp presence update (composing / paused) to a chat.
+func (c *Channel) sendPresence(to, state string) {
+	if err := c.SendBridgeCommand("presence", map[string]any{"to": to, "state": state}); err != nil {
+		slog.Debug("whatsapp: failed to send presence update", "state", state, "error", err)
+	}
 }
 
 // connect establishes the WebSocket connection to the bridge.
@@ -165,6 +258,7 @@ func (c *Channel) listenLoop() {
 
 			if err := c.connect(); err != nil {
 				slog.Warn("whatsapp bridge reconnect failed", "error", err)
+				c.MarkDegraded("Bridge unreachable", err.Error(), channels.ChannelFailureKindNetwork, true)
 				backoff = min(backoff*2, 30*time.Second)
 				continue
 			}
@@ -195,9 +289,102 @@ func (c *Channel) listenLoop() {
 		}
 
 		msgType, _ := msg["type"].(string)
-		if msgType == "message" {
+		switch msgType {
+		case "message":
 			c.handleIncomingMessage(msg)
+		case "qr":
+			c.handleBridgeQR(msg)
+		case "status":
+			c.handleBridgeStatus(msg)
+		case "":
+			// Bridge sent a message without a "type" field — common misconfiguration.
+			// Expected format: {"type":"message","from":"...","chat":"...","content":"..."}
+			// Check your bridge: fields must be "from"/"content", not "sender"/"body".
+			slog.Warn("whatsapp bridge sent message without 'type' field — bridge format mismatch",
+				"hint", "add type:\"message\", rename sender→from, body→content",
+				"received_keys", mapKeys(msg),
+			)
+		default:
+			slog.Debug("whatsapp bridge unknown event type, ignoring", "type", msgType)
 		}
+	}
+}
+
+// mapKeys returns the keys of a map for diagnostic logging.
+func mapKeys(m map[string]any) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+// handleBridgeQR processes a QR code event from the bridge.
+// It generates a PNG, caches it, and broadcasts a bus event for the QR wizard.
+func (c *Channel) handleBridgeQR(msg map[string]any) {
+	rawQR, _ := msg["data"].(string)
+	if rawQR == "" {
+		return
+	}
+
+	png, err := qrcode.Encode(rawQR, qrcode.Medium, 256)
+	if err != nil {
+		slog.Warn("whatsapp: failed to encode QR PNG", "error", err)
+		return
+	}
+	pngB64 := base64.StdEncoding.EncodeToString(png)
+
+	c.lastQRMu.Lock()
+	c.lastQRB64 = pngB64
+	c.lastQRMu.Unlock()
+
+	slog.Info("whatsapp bridge QR received — scan to authenticate", "channel", c.Name())
+
+	if mb := c.Bus(); mb != nil {
+		mb.Broadcast(bus.Event{
+			Name:     protocol.EventWhatsAppQRCode,
+			TenantID: c.TenantID(),
+			Payload: map[string]any{
+				"channel_name": c.Name(),
+				"png_b64":      pngB64,
+			},
+		})
+	}
+}
+
+// handleBridgeStatus processes a status event from the bridge.
+// On connect, it marks the channel healthy and broadcasts a QR-done event.
+// On disconnect, it marks the channel degraded (reconnect loop will retry).
+func (c *Channel) handleBridgeStatus(msg map[string]any) {
+	connected, _ := msg["connected"].(bool)
+	slog.Debug("whatsapp bridge status", "connected", connected, "channel", c.Name())
+
+	c.lastQRMu.Lock()
+	c.waAuthenticated = connected
+	if connected {
+		c.lastQRB64 = "" // clear QR — no longer needed
+		// Capture bot's own JID for group mention detection.
+		if me, ok := msg["me"].(string); ok && me != "" {
+			c.myJID = me
+			slog.Info("whatsapp: bot JID set", "jid", me, "channel", c.Name())
+		}
+	}
+	c.lastQRMu.Unlock()
+
+	if connected {
+		c.MarkHealthy("WhatsApp authenticated and connected")
+		if mb := c.Bus(); mb != nil {
+			mb.Broadcast(bus.Event{
+				Name:     protocol.EventWhatsAppQRDone,
+				TenantID: c.TenantID(),
+				Payload: map[string]any{
+					"channel_name": c.Name(),
+					"success":      true,
+				},
+			})
+		}
+	} else {
+		c.MarkDegraded("WhatsApp disconnected", "Bridge reported disconnection — waiting for reconnect", channels.ChannelFailureKindNetwork, true)
 	}
 }
 
@@ -222,6 +409,8 @@ func (c *Channel) handleIncomingMessage(msg map[string]any) {
 		peerKind = "group"
 	}
 
+	slog.Debug("whatsapp incoming", "peer", peerKind, "sender", senderID, "chat", chatID, "policy", c.config.GroupPolicy)
+
 	// DM/Group policy check
 	if peerKind == "direct" {
 		if !c.checkDMPolicy(ctx, senderID, chatID) {
@@ -229,30 +418,48 @@ func (c *Channel) handleIncomingMessage(msg map[string]any) {
 		}
 	} else {
 		if !c.checkGroupPolicy(ctx, senderID, chatID) {
-			slog.Debug("whatsapp group message rejected by policy", "sender_id", senderID)
+			slog.Info("whatsapp group message rejected by policy", "sender_id", senderID, "chat_id", chatID, "policy", c.config.GroupPolicy)
 			return
 		}
 	}
 
 	// Allowlist check
 	if !c.IsAllowed(senderID) {
-		slog.Debug("whatsapp message rejected by allowlist", "sender_id", senderID)
+		slog.Info("whatsapp message rejected by allowlist", "sender_id", senderID)
 		return
 	}
 
 	content, _ := msg["content"].(string)
-	if content == "" {
-		content = "[empty message]"
+
+	// Parse media items from bridge: [{type, mimetype, filename, path}, ...]
+	var mediaList []media.MediaInfo
+	if mediaData, ok := msg["media"].([]any); ok {
+		for _, item := range mediaData {
+			m, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			filePath, _ := m["path"].(string)
+			if filePath == "" {
+				continue
+			}
+			mediaType, _ := m["type"].(string)
+			mimeType, _ := m["mimetype"].(string)
+			fileName, _ := m["filename"].(string)
+			mediaList = append(mediaList, media.MediaInfo{
+				Type:        mediaType,
+				FilePath:    filePath,
+				ContentType: mimeType,
+				FileName:    fileName,
+			})
+		}
 	}
 
-	var media []string
-	if mediaData, ok := msg["media"].([]any); ok {
-		media = make([]string, 0, len(mediaData))
-		for _, m := range mediaData {
-			if path, ok := m.(string); ok {
-				media = append(media, path)
-			}
-		}
+	if content == "" && len(mediaList) == 0 {
+		return // nothing to process
+	}
+	if content == "" {
+		content = "[empty message]"
 	}
 
 	metadata := make(map[string]string)
@@ -261,6 +468,29 @@ func (c *Channel) handleIncomingMessage(msg map[string]any) {
 	}
 	if userName, ok := msg["from_name"].(string); ok {
 		metadata["user_name"] = userName
+	}
+
+	// require_mention: in groups, only process when the bot's JID is @mentioned.
+	// Fails closed: if bot JID is unknown, treat as not-mentioned (don't respond).
+	if peerKind == "group" && c.config.RequireMention != nil && *c.config.RequireMention {
+		c.lastQRMu.RLock()
+		myJID := c.myJID
+		c.lastQRMu.RUnlock()
+		mentioned := false
+		if myJID != "" {
+			if jids, ok := msg["mentioned_jids"].([]any); ok {
+				for _, j := range jids {
+					if jid, ok := j.(string); ok && jid == myJID {
+						mentioned = true
+						break
+					}
+				}
+			}
+		}
+		if !mentioned {
+			slog.Debug("whatsapp group message skipped — bot not @mentioned", "sender_id", senderID, "my_jid", myJID)
+			return
+		}
 	}
 
 	slog.Debug("whatsapp message received",
@@ -274,12 +504,64 @@ func (c *Channel) handleIncomingMessage(msg map[string]any) {
 		cc.EnsureContact(ctx, c.Type(), c.Name(), senderID, senderID, metadata["user_name"], "", peerKind, "user", "", "")
 	}
 
+	// Build media tags (e.g. <media:image>, <media:document name="...">)
+	// and bus.MediaFile list for the agent pipeline.
+	var mediaFiles []bus.MediaFile
+	if len(mediaList) > 0 {
+		mediaTags := media.BuildMediaTags(mediaList)
+		if mediaTags != "" {
+			if content != "[empty message]" {
+				content = mediaTags + "\n\n" + content
+			} else {
+				content = mediaTags
+			}
+		}
+		for _, m := range mediaList {
+			if m.FilePath != "" {
+				mediaFiles = append(mediaFiles, bus.MediaFile{
+					Path:     m.FilePath,
+					MimeType: m.ContentType,
+				})
+			}
+		}
+	}
+
 	// Annotate with sender identity so the agent knows who is messaging.
 	if senderName := metadata["user_name"]; senderName != "" {
 		content = fmt.Sprintf("[From: %s]\n%s", senderName, content)
 	}
 
-	c.HandleMessage(senderID, chatID, content, media, metadata, peerKind)
+	// Cancel any previous typing loop for this chat before starting a new one.
+	// Without this, consecutive messages leak orphaned goroutines that send
+	// "composing" forever (the old cancel gets overwritten in the sync.Map).
+	if prevCancel, ok := c.typingCancel.LoadAndDelete(chatID); ok {
+		prevCancel.(context.CancelFunc)()
+	}
+
+	// Show typing indicator for the full duration of agent processing.
+	// WhatsApp clears "composing" after ~10s so we refresh every 8s.
+	typingCtx, typingCancel := context.WithCancel(context.Background())
+	c.typingCancel.Store(chatID, typingCancel)
+	go c.keepTyping(typingCtx, chatID)
+
+	// Derive userID from senderID.
+	userID := senderID
+	if idx := strings.IndexByte(senderID, '|'); idx > 0 {
+		userID = senderID[:idx]
+	}
+
+	c.Bus().PublishInbound(bus.InboundMessage{
+		Channel:  c.Name(),
+		SenderID: senderID,
+		ChatID:   chatID,
+		Content:  content,
+		Media:    mediaFiles,
+		PeerKind: peerKind,
+		UserID:   userID,
+		AgentID:  c.AgentID(),
+		TenantID: c.TenantID(),
+		Metadata: metadata,
+	})
 }
 
 // checkGroupPolicy evaluates the group policy for a sender, with pairing support.
@@ -295,7 +577,7 @@ func (c *Channel) checkGroupPolicy(ctx context.Context, senderID, chatID string)
 	case "allowlist":
 		return c.IsAllowed(senderID)
 	case "pairing":
-		if c.IsAllowed(senderID) {
+		if c.HasAllowList() && c.IsAllowed(senderID) {
 			return true
 		}
 		if _, cached := c.approvedGroups.Load(chatID); cached {
@@ -366,19 +648,21 @@ func (c *Channel) checkDMPolicy(ctx context.Context, senderID, chatID string) bo
 // sendPairingReply sends a pairing code to the user via the WS bridge.
 func (c *Channel) sendPairingReply(ctx context.Context, senderID, chatID string) {
 	if c.pairingService == nil {
+		slog.Warn("whatsapp pairing: no pairing service configured")
 		return
 	}
 
 	// Debounce
 	if lastSent, ok := c.pairingDebounce.Load(senderID); ok {
 		if time.Since(lastSent.(time.Time)) < pairingDebounceTime {
+			slog.Info("whatsapp pairing: debounced", "sender_id", senderID)
 			return
 		}
 	}
 
 	code, err := c.pairingService.RequestPairing(ctx, senderID, c.Name(), chatID, "default", nil)
 	if err != nil {
-		slog.Debug("whatsapp pairing request failed", "sender_id", senderID, "error", err)
+		slog.Warn("whatsapp pairing request failed", "sender_id", senderID, "channel", c.Name(), "error", err)
 		return
 	}
 
