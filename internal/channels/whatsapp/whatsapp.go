@@ -364,7 +364,44 @@ func (c *Channel) handleIncomingMessage(evt *events.Message) {
 }
 
 // extractTextContent extracts text from any WhatsApp message variant.
+// Includes quoted message context when present (reply-to messages).
 func extractTextContent(msg *waE2E.Message) string {
+	if msg == nil {
+		return ""
+	}
+
+	var text string
+	var quotedText string
+
+	if msg.GetConversation() != "" {
+		text = msg.GetConversation()
+	} else if ext := msg.GetExtendedTextMessage(); ext != nil {
+		text = ext.GetText()
+		// Extract quoted (replied-to) message text.
+		if ci := ext.GetContextInfo(); ci != nil {
+			if qm := ci.GetQuotedMessage(); qm != nil {
+				quotedText = extractQuotedText(qm)
+			}
+		}
+	} else if img := msg.GetImageMessage(); img != nil {
+		text = img.GetCaption()
+	} else if vid := msg.GetVideoMessage(); vid != nil {
+		text = vid.GetCaption()
+	} else if doc := msg.GetDocumentMessage(); doc != nil {
+		text = doc.GetCaption()
+	}
+
+	if quotedText != "" && text != "" {
+		return fmt.Sprintf("[Replying to: %s]\n%s", quotedText, text)
+	}
+	if quotedText != "" {
+		return fmt.Sprintf("[Replying to: %s]", quotedText)
+	}
+	return text
+}
+
+// extractQuotedText extracts plain text from a quoted message (no recursion).
+func extractQuotedText(msg *waE2E.Message) string {
 	if msg == nil {
 		return ""
 	}
@@ -374,14 +411,11 @@ func extractTextContent(msg *waE2E.Message) string {
 	if ext := msg.GetExtendedTextMessage(); ext != nil {
 		return ext.GetText()
 	}
-	if img := msg.GetImageMessage(); img != nil {
+	if img := msg.GetImageMessage(); img != nil && img.GetCaption() != "" {
 		return img.GetCaption()
 	}
-	if vid := msg.GetVideoMessage(); vid != nil {
+	if vid := msg.GetVideoMessage(); vid != nil && vid.GetCaption() != "" {
 		return vid.GetCaption()
-	}
-	if doc := msg.GetDocumentMessage(); doc != nil {
-		return doc.GetCaption()
 	}
 	return ""
 }
