@@ -46,7 +46,8 @@ type Channel struct {
 	lastQRMu        sync.RWMutex
 	lastQRB64       string     // base64-encoded PNG, empty when authenticated
 	waAuthenticated bool       // true once WhatsApp account is connected
-	myJID           types.JID  // bot's own JID for mention detection
+	myJID           types.JID  // bot's phone JID for mention detection
+	myLID           types.JID  // bot's Link ID (LID) — WhatsApp's newer identifier
 
 	// typingCancel tracks active typing-refresh loops per chatID.
 	typingCancel sync.Map // chatID string → context.CancelFunc
@@ -187,7 +188,9 @@ func (c *Channel) handleConnected() {
 	c.lastQRB64 = ""
 	if c.client.Store.ID != nil {
 		c.myJID = *c.client.Store.ID
-		slog.Info("whatsapp: connected", "jid", c.myJID.String(), "channel", c.Name())
+		c.myLID = c.client.Store.GetLID()
+		slog.Info("whatsapp: connected", "jid", c.myJID.String(),
+			"lid", c.myLID.String(), "channel", c.Name())
 	}
 	c.lastQRMu.Unlock()
 
@@ -238,6 +241,14 @@ func (c *Channel) handleIncomingMessage(evt *events.Message) {
 
 	senderJID := evt.Info.Sender
 	chatJID := evt.Info.Chat
+
+	// WhatsApp uses dual identity: phone JID (@s.whatsapp.net) and LID (@lid).
+	// Groups may use LID addressing. Normalize to phone JID for consistent
+	// policy checks, pairing lookups, allowlists, and contact collection.
+	if evt.Info.AddressingMode == types.AddressingModeLID && !evt.Info.SenderAlt.IsEmpty() {
+		senderJID = evt.Info.SenderAlt
+	}
+
 	senderID := senderJID.String()
 	chatID := chatJID.String()
 
@@ -246,7 +257,8 @@ func (c *Channel) handleIncomingMessage(evt *events.Message) {
 		peerKind = "group"
 	}
 
-	slog.Debug("whatsapp incoming", "peer", peerKind, "sender", senderID, "chat", chatID, "policy", c.config.GroupPolicy)
+	slog.Debug("whatsapp incoming", "peer", peerKind, "sender", senderID, "chat", chatID,
+		"addressing", evt.Info.AddressingMode, "policy", c.config.GroupPolicy)
 
 	// DM/Group policy check.
 	if peerKind == "direct" {
@@ -375,13 +387,15 @@ func extractTextContent(msg *waE2E.Message) string {
 }
 
 // isMentioned checks if the bot is @mentioned in a group message.
+// WhatsApp uses dual identity: phone JID and LID. Mentions may use either format.
 func (c *Channel) isMentioned(evt *events.Message) bool {
 	c.lastQRMu.RLock()
 	myJID := c.myJID
+	myLID := c.myLID
 	c.lastQRMu.RUnlock()
 
-	if myJID.IsEmpty() {
-		return false // fail closed: unknown JID = not mentioned
+	if myJID.IsEmpty() && myLID.IsEmpty() {
+		return false // fail closed: unknown identity = not mentioned
 	}
 
 	// Check mentioned JIDs from extended text.
@@ -389,7 +403,10 @@ func (c *Channel) isMentioned(evt *events.Message) bool {
 		if ci := ext.GetContextInfo(); ci != nil {
 			for _, jidStr := range ci.GetMentionedJID() {
 				mentioned, _ := types.ParseJID(jidStr)
-				if mentioned.User == myJID.User {
+				if !myJID.IsEmpty() && mentioned.User == myJID.User {
+					return true
+				}
+				if !myLID.IsEmpty() && mentioned.User == myLID.User {
 					return true
 				}
 			}
