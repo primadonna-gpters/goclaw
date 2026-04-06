@@ -12,6 +12,7 @@ import (
 
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/proto/waE2E"
+	wastore "go.mau.fi/whatsmeow/store"
 	"go.mau.fi/whatsmeow/store/sqlstore"
 	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
@@ -87,6 +88,9 @@ func New(cfg config.WhatsAppConfig, msgBus *bus.MessageBus,
 
 	base := channels.NewBaseChannel(channels.TypeWhatsApp, msgBus, cfg.AllowFrom)
 	base.ValidatePolicy(cfg.DMPolicy, cfg.GroupPolicy)
+
+	// Set device name shown in WhatsApp's "Linked Devices" screen.
+	wastore.DeviceProps.Os = proto.String("GoClaw")
 
 	dialect := detectDialect(db)
 	container := sqlstore.NewWithDB(db, dialect, nil)
