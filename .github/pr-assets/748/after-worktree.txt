@@ -1,0 +1,22 @@
+=== RUN   TestSetupToolRegistryExecWorkspacePaths
+2026/04/07 18:39:09 INFO memory + knowledge graph tools registered (PG-backed)
+2026/04/07 18:39:09 INFO web_search tool enabled
+2026/04/07 18:39:09 INFO web_fetch tool enabled policy="" blocked=0
+2026/04/07 18:39:09 INFO tts enabled provider=edge auto=off
+2026/04/07 18:39:09 INFO tool rate limiting enabled per_hour=150
+2026/04/07 18:39:09 INFO exec approval enabled security=full ask=off
+=== RUN   TestSetupToolRegistryExecWorkspacePaths/personal_workspace_prefixed_uploads_allowed
+2026/04/07 18:39:09 WARN secure_cli.lookup: store is nil, skipping credentialed exec command="printf '%s' file=@\"/var/folders/t9/0cyfylls7d1gdy_6qp8kn2qc0000gn/T/TestSetupToolRegistryExecWorkspacePaths633890439/001/personal/.uploads/Quarterly Report.png\""
+=== RUN   TestSetupToolRegistryExecWorkspacePaths/team_workspace_quoted_input_allowed
+2026/04/07 18:39:09 WARN secure_cli.lookup: store is nil, skipping credentialed exec command="printf '%s' --input=\"/var/folders/t9/0cyfylls7d1gdy_6qp8kn2qc0000gn/T/TestSetupToolRegistryExecWorkspacePaths633890439/001/teams/team-123/Quarterly Report.png\""
+=== RUN   TestSetupToolRegistryExecWorkspacePaths/team_workspace_symlink_escape_denied
+=== RUN   TestSetupToolRegistryExecWorkspacePaths/unrelated_data_dir_path_denied
+=== RUN   TestSetupToolRegistryExecWorkspacePaths/workspace_local_dotgoclaw_denied
+--- PASS: TestSetupToolRegistryExecWorkspacePaths (0.01s)
+    --- PASS: TestSetupToolRegistryExecWorkspacePaths/personal_workspace_prefixed_uploads_allowed (0.01s)
+    --- PASS: TestSetupToolRegistryExecWorkspacePaths/team_workspace_quoted_input_allowed (0.00s)
+    --- PASS: TestSetupToolRegistryExecWorkspacePaths/team_workspace_symlink_escape_denied (0.00s)
+    --- PASS: TestSetupToolRegistryExecWorkspacePaths/unrelated_data_dir_path_denied (0.00s)
+    --- PASS: TestSetupToolRegistryExecWorkspacePaths/workspace_local_dotgoclaw_denied (0.00s)
+PASS
+ok  	github.com/nextlevelbuilder/goclaw/cmd	0.034s
