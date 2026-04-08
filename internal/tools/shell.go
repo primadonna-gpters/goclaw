@@ -160,7 +160,11 @@ func (t *ExecTool) isNestedUnderDeniedRoot(path string) bool {
 		if cleanRoot == "." || cleanRoot == string(filepath.Separator) {
 			continue
 		}
-		if filepath.IsAbs(cleanRoot) != filepath.IsAbs(path) {
+		if !filepath.IsAbs(cleanRoot) {
+			marker := string(filepath.Separator) + cleanRoot + string(filepath.Separator)
+			if strings.Contains(path, marker) {
+				return true
+			}
 			continue
 		}
 		if path == cleanRoot {

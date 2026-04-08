@@ -606,6 +606,13 @@ func TestPathAliasVariants_AppWorkspaceMirror(t *testing.T) {
 	}
 }
 
+func TestIsNestedUnderDeniedRoot_RelativeDotGoclaw(t *testing.T) {
+	tool := &ExecTool{pathDenyRoots: []string{".goclaw/"}}
+	if !tool.isNestedUnderDeniedRoot("/app/.goclaw/glm-thuc-bo/ws/user/.uploads") {
+		t.Fatal("expected absolute .goclaw path to be treated as nested under relative deny root")
+	}
+}
+
 func TestLimitedBuffer(t *testing.T) {
 	t.Run("under limit", func(t *testing.T) {
 		lb := &limitedBuffer{max: 100}
