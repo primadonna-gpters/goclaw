@@ -149,18 +149,28 @@ ul { margin-left: 1.1rem; color: var(--muted); }
   Before source: <code>claw</code> baseline checkout from <code>/opt/goclaw</code> at commit <code>0e2282be</code>, exercised inside a temporary Go container on the machine. After source: current local worktree at PR head <code>7a1c278c</code>. Supporting live recreation used the real <code>GLM thục bô</code> chat surface on <code>claw:3000</code>. Callout border marks the noteworthy runtime section.
 </div>
 
-<div class="supporting">
-  <h2>Supporting Live Recreation on <code>claw</code></h2>
-  <div class="panel">
-    <img src="claw-live-glm-thuc-bo-before.png" alt="Live claw recreation with GLM thục bô">
+<div class="comparison">
+  <h2>UI Before / After</h2>
+  <div class="grid">
+    <div>
+      <div class="col-header before">Before</div>
+      <div class="panel">
+        <img src="pr748-before-absolute-goclaw-blocked.png" alt="Before: stable claw blocks absolute .goclaw upload path">
+      </div>
+      <p class="desc">Stable <code>claw</code> release, fresh chat with <code>GLM thục bô</code>: the agent runs the exact absolute <code>/app/.goclaw/.../.uploads/...jpg</code> copy command and the <code>exec</code> row fails with the safety-policy <code>.goclaw/</code> denial.</p>
+    </div>
+    <div>
+      <div class="col-header after">After</div>
+      <div class="panel">
+        <img src="pr748-after-absolute-goclaw-allowed.png" alt="After: fixed temporary claw deployment allows absolute .goclaw upload path">
+      </div>
+      <p class="desc">Temporary fixed deployment on <code>claw:3001</code>, fresh chat with the same agent: the same absolute <code>/app/.goclaw/.../.uploads/...jpg</code> copy command now completes successfully and returns <code>/tmp/partner-abs.png</code>.</p>
+    </div>
   </div>
-  <p class="desc">
-    Live baseline recreation with <code>GLM thục bô</code>: after the initial attachment turn, the second text-only turn reaches the tool loop and shows the deployed instance copying from a relative <code>.uploads/...</code> path. This documents the runtime context on <code>claw</code>, but the PR’s actual behavioral delta is the absolute-path deny handling proven below.
-  </p>
 </div>
 
 <div class="comparison">
-  <h2>Gateway-Level Before / After</h2>
+  <h2>Gateway Reproduction</h2>
   <div class="grid">
     <div>
       <div class="col-header before">Before</div>
@@ -173,19 +183,9 @@ ul { margin-left: 1.1rem; color: var(--muted); }
 <span class="hl-bad">gateway_setup_exec_workspace_test.go:133: denied = true, want false; output = command denied by safety policy: matches pattern /tmp/TestSetupToolRegistryExecWorkspacePaths.../001</span>
 === RUN   TestSetupToolRegistryExecWorkspacePaths/legacy_dotgoclaw_uploads_layout_allowed
 <span class="hl-bad">gateway_setup_exec_workspace_test.go:133: denied = true, want false; output = command denied by safety policy: matches pattern /tmp/TestSetupToolRegistryExecWorkspacePaths.../001</span>
-=== RUN   TestSetupToolRegistryExecWorkspacePaths/team_workspace_symlink_escape_denied
-=== RUN   TestSetupToolRegistryExecWorkspacePaths/unrelated_data_dir_path_denied
-=== RUN   TestSetupToolRegistryExecWorkspacePaths/workspace_local_dotgoclaw_denied
---- FAIL: TestSetupToolRegistryExecWorkspacePaths (0.01s)
-    --- FAIL: personal_workspace_prefixed_uploads_allowed
-    --- FAIL: team_workspace_quoted_input_allowed
-    --- FAIL: legacy_dotgoclaw_uploads_layout_allowed
-    --- PASS: team_workspace_symlink_escape_denied
-    --- PASS: unrelated_data_dir_path_denied
-    --- PASS: workspace_local_dotgoclaw_denied
 FAIL</pre>
       </div>
-      <p class="desc">Baseline on <code>claw</code>: the deployed code still denies representative active-workspace paths when they are quoted, prefixed, or stored in the screenshot-era <code>.goclaw/.../uploads</code> layout.</p>
+      <p class="desc">Baseline source on <code>claw</code>: the exact gateway wiring still rejects all three representative workspace-path forms.</p>
     </div>
     <div>
       <div class="col-header after">After</div>
@@ -195,21 +195,25 @@ FAIL</pre>
 === RUN   TestSetupToolRegistryExecWorkspacePaths/personal_workspace_prefixed_uploads_allowed
 === RUN   TestSetupToolRegistryExecWorkspacePaths/team_workspace_quoted_input_allowed
 === RUN   TestSetupToolRegistryExecWorkspacePaths/legacy_dotgoclaw_uploads_layout_allowed
-=== RUN   TestSetupToolRegistryExecWorkspacePaths/team_workspace_symlink_escape_denied
-=== RUN   TestSetupToolRegistryExecWorkspacePaths/unrelated_data_dir_path_denied
-=== RUN   TestSetupToolRegistryExecWorkspacePaths/workspace_local_dotgoclaw_denied
 <span class="hl-good">--- PASS: TestSetupToolRegistryExecWorkspacePaths (0.01s)</span>
 <span class="hl-good">    --- PASS: personal_workspace_prefixed_uploads_allowed</span>
 <span class="hl-good">    --- PASS: team_workspace_quoted_input_allowed</span>
 <span class="hl-good">    --- PASS: legacy_dotgoclaw_uploads_layout_allowed</span>
-<span class="hl-good">    --- PASS: team_workspace_symlink_escape_denied</span>
-<span class="hl-good">    --- PASS: unrelated_data_dir_path_denied</span>
-<span class="hl-good">    --- PASS: workspace_local_dotgoclaw_denied</span>
-<span class="hl-good">PASS</span></pre>
+PASS</pre>
       </div>
-      <p class="desc">Current worktree: the same end-to-end gateway wiring now allows the intended active-workspace paths, while keeping the security-denied paths blocked.</p>
+      <p class="desc">Current worktree: the same gateway path handling now passes for personal uploads, team workspace paths, and the screenshot-era legacy <code>.goclaw/.../uploads</code> layout.</p>
     </div>
   </div>
+</div>
+
+<div class="supporting">
+  <h2>Supporting Live Recreation on <code>claw</code></h2>
+  <div class="panel">
+    <img src="claw-live-glm-thuc-bo-before.png" alt="Live claw recreation with GLM thục bô">
+  </div>
+  <p class="desc">
+    This earlier live run documents the same production agent and workspace context on stable <code>claw</code>. The report’s primary Before/After pair above is the clean isolated proof you asked for; this screenshot is kept as supporting context for the reproduction journey.
+  </p>
 </div>
 
 <div class="comparison">
@@ -217,7 +221,7 @@ FAIL</pre>
   <ul>
     <li>Quoted/prefixed upload arguments now survive the deny matcher when they point into the active personal <code>.uploads</code> subtree, the legacy <code>.goclaw/.../uploads</code> subtree, or the active team workspace.</li>
     <li>Symlink escapes, unrelated <code>dataDir</code> files, and workspace-local <code>.goclaw/*</code> remain denied.</li>
-    <li>The behavioral difference is shown against a real <code>claw</code> baseline and the exact current worktree code that backs PR #748.</li>
+    <li>The visual behavior difference is now shown on two real frontends: stable <code>claw:3000</code> Before and temporary fixed <code>claw:3001</code> After, both using fresh conversations.</li>
   </ul>
 </div>
 </body>
