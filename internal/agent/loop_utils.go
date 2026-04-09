@@ -66,11 +66,11 @@ func (l *Loop) shouldShareKnowledgeGraph() bool {
 
 // buildChannelMeta extracts channel metadata from RunRequest for bootstrap decisions.
 // Returns nil when channel type is unknown (preserves normal bootstrap flow).
-func (l *Loop) buildChannelMeta(req *RunRequest) *ChannelMeta {
+func (l *Loop) buildChannelMeta(req *RunRequest) *bootstrap.ChannelMeta {
 	if req == nil || req.ChannelType == "" {
 		return nil
 	}
-	return &ChannelMeta{
+	return &bootstrap.ChannelMeta{
 		ChannelType:     req.ChannelType,
 		DisplayName:     req.DisplayName,
 		DefaultTimezone: l.defaultTimezone,
@@ -80,7 +80,7 @@ func (l *Loop) buildChannelMeta(req *RunRequest) *ChannelMeta {
 // getOrCreateUserSetup returns the cached userSetup for a user, creating it on first call.
 // On first call: seeds context files (non-team) and resolves workspace from user profile.
 // On subsequent calls: returns cached setup immediately (no DB calls).
-func (l *Loop) getOrCreateUserSetup(ctx context.Context, userID, channel string, isTeamSession bool, channelMeta *ChannelMeta) *userSetup {
+func (l *Loop) getOrCreateUserSetup(ctx context.Context, userID, channel string, isTeamSession bool, channelMeta *bootstrap.ChannelMeta) *userSetup {
 	if userID == "" {
 		return &userSetup{workspace: l.workspace}
 	}

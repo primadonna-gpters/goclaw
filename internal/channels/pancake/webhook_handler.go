@@ -93,7 +93,7 @@ func (r *webhookRouter) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	slog.Info("pancake: webhook body received",
+	slog.Debug("pancake: webhook body received",
 		"body_len", len(body),
 		"body_preview", truncateBody(body, 1000))
 
@@ -129,14 +129,14 @@ func (r *webhookRouter) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	convType := strings.ToUpper(data.Conversation.Type)
 
 	if event.EventType != "" && !strings.EqualFold(event.EventType, "messaging") {
-		slog.Info("pancake: skipping non-messaging webhook event",
+		slog.Debug("pancake: skipping non-messaging webhook event",
 			"event_type", event.EventType,
 			"page_id", pageID)
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	slog.Info("pancake: webhook event parsed",
+	slog.Debug("pancake: webhook event parsed",
 		"event_type", event.EventType,
 		"page_id", pageID,
 		"conv_id", data.Conversation.ID,

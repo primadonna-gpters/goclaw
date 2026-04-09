@@ -62,13 +62,15 @@ func stripMarkdown(content string) string {
 	return strings.TrimSpace(content)
 }
 
-// truncateForTikTok truncates content to TikTok DM limit (500 chars).
+// truncateForTikTok truncates content to TikTok DM limit (500 runes).
+// Uses rune slicing to avoid corrupting multi-byte UTF-8 (CJK, Vietnamese, emoji).
 func truncateForTikTok(content string) string {
 	const limit = 500
-	if len(content) <= limit {
+	runes := []rune(content)
+	if len(runes) <= limit {
 		return content
 	}
-	return content[:limit-3] + "..."
+	return string(runes[:limit-3]) + "..."
 }
 
 // Compiled regexes for markdown stripping — package-level for efficiency.

@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/nextlevelbuilder/goclaw/internal/bus"
 	"github.com/nextlevelbuilder/goclaw/internal/channels"
@@ -370,6 +372,64 @@ func TestAPIClientSendMessageReturnsBodyLevelError(t *testing.T) {
 	}
 }
 
+// TestTruncateForTikTok_MultiByteCharacters verifies rune-safe truncation for
+// Vietnamese diacritics and emoji (multi-byte UTF-8 sequences).
+func TestTruncateForTikTok_MultiByteCharacters(t *testing.T) {
+	// Vietnamese text with diacritics (multi-byte UTF-8)
+	input := strings.Repeat("Xin chào ", 100) // ~900 bytes, <500 runes
+	result := truncateForTikTok(input)
+	if !utf8.ValidString(result) {
+		t.Fatal("truncateForTikTok produced invalid UTF-8")
+	}
+
+	// Emoji string exceeding 500 runes
+	emoji := strings.Repeat("😊", 600)
+	result = truncateForTikTok(emoji)
+	runes := []rune(result)
+	if len(runes) > 500 {
+		t.Errorf("expected <=500 runes, got %d", len(runes))
+	}
+	if !utf8.ValidString(result) {
+		t.Fatal("emoji truncation produced invalid UTF-8")
+	}
+}
+
+// TestMessageHandlerEmptyMessageID verifies that two messages with empty IDs
+// from different conversations are both published (not deduped against each other).
+func TestMessageHandlerEmptyMessageID(t *testing.T) {
+	msgBus := bus.New()
+	ch := &Channel{
+		BaseChannel: channels.NewBaseChannel(channels.TypePancake, msgBus, nil),
+		pageID:      "page-123",
+	}
+
+	// First message with empty ID — should be published
+	ch.handleMessagingEvent(MessagingData{
+		PageID: "page-123", ConversationID: "conv-1",
+		Type: "INBOX", Platform: "facebook",
+		Message: MessagingMessage{ID: "", SenderID: "user-1", Content: "hello"},
+	})
+
+	// Second message with empty ID, different conversation — should ALSO be published
+	ch.handleMessagingEvent(MessagingData{
+		PageID: "page-123", ConversationID: "conv-2",
+		Type: "INBOX", Platform: "facebook",
+		Message: MessagingMessage{ID: "", SenderID: "user-2", Content: "world"},
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	_, ok1 := msgBus.ConsumeInbound(ctx)
+	if !ok1 {
+		t.Fatal("first empty-ID message should be published")
+	}
+	_, ok2 := msgBus.ConsumeInbound(ctx)
+	if !ok2 {
+		t.Fatal("second empty-ID message should NOT be deduped against first")
+	}
+}
+
 func TestAPIClientUploadMediaMatchesOfficialContract(t *testing.T) {
 	transport := &captureTransport{
 		resp: &http.Response{
@@ -399,5 +459,26 @@ func TestAPIClientUploadMediaMatchesOfficialContract(t *testing.T) {
 	}
 	if !strings.HasPrefix(transport.req.Header.Get("Content-Type"), "multipart/form-data; boundary=") {
 		t.Fatalf("upload Content-Type = %q, want multipart/form-data", transport.req.Header.Get("Content-Type"))
+	}
+}
+
+// TestIsAuthError_WrappedError verifies errors.As works with wrapped apiError.
+func TestIsAuthError_WrappedError(t *testing.T) {
+	inner := &apiError{Code: 401, Message: "unauthorized"}
+	wrapped := fmt.Errorf("send failed: %w", inner)
+	if !isAuthError(wrapped) {
+		t.Error("isAuthError should detect wrapped 401 apiError via errors.As")
+	}
+	if isAuthError(fmt.Errorf("random error")) {
+		t.Error("isAuthError should return false for non-apiError")
+	}
+}
+
+// TestIsRateLimitError_WrappedError verifies errors.As works with wrapped rate limit.
+func TestIsRateLimitError_WrappedError(t *testing.T) {
+	inner := &apiError{Code: 429, Message: "too many requests"}
+	wrapped := fmt.Errorf("send failed: %w", inner)
+	if !isRateLimitError(wrapped) {
+		t.Error("isRateLimitError should detect wrapped 429 apiError via errors.As")
 	}
 }

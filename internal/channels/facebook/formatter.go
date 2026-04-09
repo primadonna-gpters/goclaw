@@ -50,6 +50,8 @@ func FormatForMessenger(text string) string {
 
 // splitMessage splits text into chunks of at most maxChars runes,
 // preferring paragraph or sentence boundaries to avoid mid-word cuts.
+// Uses plain-text splitting (not channels.ChunkMarkdown) because Facebook
+// strips all markdown — fenced code block repair is unnecessary.
 func splitMessage(text string, maxChars int) []string {
 	runes := []rune(text) // convert once
 	if len(runes) <= maxChars {

@@ -39,21 +39,12 @@ type userSetup struct {
 // Does NOT seed context files — that's SeedUserFilesFunc's responsibility.
 type EnsureUserProfileFunc func(ctx context.Context, agentID uuid.UUID, userID, workspace, channel string) (effectiveWorkspace string, isNew bool, err error)
 
-// ChannelMeta carries channel-provided contact info for bootstrap decisions.
-// When a channel provides enough user info (e.g. display_name from Pancake webhook),
-// SeedUserFiles can skip BOOTSTRAP.md and pre-fill USER.md instead.
-type ChannelMeta struct {
-	ChannelType     string // platform type: "pancake", "telegram", "discord", etc.
-	DisplayName     string // user's display name from channel (e.g. Facebook profile name)
-	DefaultTimezone string // system default timezone from config (e.g. "Asia/Ho_Chi_Minh")
-}
-
 // SeedUserFilesFunc seeds per-user context files (BOOTSTRAP.md, USER.md, etc.).
 // Called once per user per Loop instance, independent of workspace.
 // isNew indicates whether the profile was just created (seed all) or already existed
 // (only seed if user has zero files — avoids re-seeding after BOOTSTRAP.md cleanup).
 // channelMeta carries optional channel-provided contact info for bootstrap skip decisions.
-type SeedUserFilesFunc func(ctx context.Context, agentID uuid.UUID, userID, agentType string, isNew bool, channelMeta *ChannelMeta) error
+type SeedUserFilesFunc func(ctx context.Context, agentID uuid.UUID, userID, agentType string, isNew bool, channelMeta *bootstrap.ChannelMeta) error
 
 // EnsureUserFilesFunc is the legacy combined callback (profile + seed + workspace).
 // Deprecated: use EnsureUserProfileFunc + SeedUserFilesFunc separately.

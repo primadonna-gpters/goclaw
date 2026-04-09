@@ -68,9 +68,7 @@ export const credentialsSchema: Record<string, FieldDef[]> = {
     { key: "webhook_secret", label: "Webhook Secret", type: "password" },
   ],
   zalo_personal: [],
-  whatsapp: [
-    { key: "bridge_url", label: "Bridge URL", type: "text", required: true, placeholder: "http://bridge:3000" },
-  ],
+  whatsapp: [],
   facebook: [
     { key: "page_access_token", label: "Page Access Token", type: "password", required: true, help: "From Facebook Developer Console → Your App → Messenger → Page Access Token" },
     { key: "app_secret", label: "App Secret", type: "password", required: true, help: "From Facebook Developer Console → Your App → Settings → Basic" },
@@ -167,12 +165,22 @@ export const configSchema: Record<string, FieldDef[]> = {
   ],
   facebook: [
     { key: "page_id", label: "Page ID", type: "text", required: true, help: "Facebook Page numeric ID" },
+    { key: "features.comment_reply", label: "Comment Auto-Reply", type: "boolean", defaultValue: false },
+    { key: "features.messenger_auto_reply", label: "Messenger Auto-Reply", type: "boolean", defaultValue: false },
+    { key: "features.first_inbox", label: "First Inbox DM", type: "boolean", defaultValue: false, help: "Send a one-time DM to commenters after their first comment reply" },
+    { key: "comment_reply_options.include_post_context", label: "Include Post Context", type: "boolean", defaultValue: false, help: "Fetch original post content for comment context" },
+    { key: "comment_reply_options.max_thread_depth", label: "Max Thread Depth", type: "number", defaultValue: 10 },
+    { key: "messenger_options.session_timeout", label: "Messenger Session Timeout", type: "text", placeholder: "e.g. 30m" },
+    { key: "post_context_cache_ttl", label: "Post Cache TTL", type: "text", placeholder: "e.g. 15m" },
+    { key: "first_inbox_message", label: "First Inbox DM Text", type: "textarea", help: "Custom DM sent to first-time commenters. Defaults to Vietnamese if empty." },
     { key: "allow_from", label: "Allowed Users", type: "tags", help: "Facebook user IDs" },
     { key: "block_reply", label: "Block Reply", type: "select", options: blockReplyOptions, defaultValue: "inherit" },
   ],
   pancake: [
     { key: "page_id", label: "Page ID", type: "text", required: true, help: "Pancake page ID (numeric, from Pancake dashboard)" },
     { key: "platform", label: "Platform (auto-detected)", type: "text", placeholder: "Leave empty — resolved at startup", help: "facebook / zalo / instagram / tiktok / whatsapp / line. Auto-detected if empty." },
+    { key: "features.inbox_reply", label: "Inbox Auto-Reply", type: "boolean", defaultValue: true },
+    { key: "features.comment_reply", label: "Comment Reply", type: "boolean", defaultValue: false },
     { key: "allow_from", label: "Allowed Users", type: "tags", help: "Sender IDs to whitelist. Empty = accept all." },
     { key: "block_reply", label: "Block Reply", type: "select", options: blockReplyOptions, defaultValue: "inherit" },
   ],

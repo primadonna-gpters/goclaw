@@ -58,15 +58,15 @@ const (
 
 // Channel type constants used across channel packages and gateway wiring.
 const (
-	TypeTelegram     = "telegram"
 	TypeDiscord      = "discord"
-	TypeSlack        = "slack"
+	TypeFacebook     = "facebook"
 	TypeFeishu       = "feishu"
+	TypePancake      = "pancake"
+	TypeSlack        = "slack"
+	TypeTelegram     = "telegram"
 	TypeWhatsApp     = "whatsapp"
 	TypeZaloOA       = "zalo_oa"
 	TypeZaloPersonal = "zalo_personal"
-	TypeFacebook     = "facebook"
-	TypePancake      = "pancake"
 )
 
 // Channel defines the interface that all channel implementations must satisfy.

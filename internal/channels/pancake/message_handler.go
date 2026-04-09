@@ -5,11 +5,13 @@ import (
 	"html"
 	"log/slog"
 	"strings"
+
+	"github.com/nextlevelbuilder/goclaw/internal/channels"
 )
 
 // handleMessagingEvent converts a Pancake "messaging" webhook event to bus.InboundMessage.
 func (ch *Channel) handleMessagingEvent(data MessagingData) {
-	slog.Info("pancake: handleMessagingEvent called",
+	slog.Debug("pancake: handleMessagingEvent called",
 		"page_id", ch.pageID,
 		"sender_id", data.Message.SenderID,
 		"conversation_id", data.ConversationID,
@@ -19,10 +21,15 @@ func (ch *Channel) handleMessagingEvent(data MessagingData) {
 		"content_len", len(data.Message.Content))
 
 	// Dedup by message ID to handle Pancake's at-least-once delivery.
-	dedupKey := fmt.Sprintf("msg:%s", data.Message.ID)
-	if ch.isDup(dedupKey) {
-		slog.Info("pancake: duplicate message skipped", "msg_id", data.Message.ID)
-		return
+	// Skip dedup when message ID is empty — prevents shared slot "msg:" from
+	// silently dropping all subsequent empty-ID messages across conversations.
+	var dedupKey string
+	if data.Message.ID != "" {
+		dedupKey = fmt.Sprintf("msg:%s", data.Message.ID)
+		if ch.isDup(dedupKey) {
+			slog.Info("pancake: duplicate message skipped", "msg_id", data.Message.ID)
+			return
+		}
 	}
 
 	// Prevent reply loops: skip messages sent by the page itself.
@@ -64,7 +71,7 @@ func (ch *Channel) handleMessagingEvent(data MessagingData) {
 		"platform":          data.Platform,
 		"conversation_id":   data.ConversationID,
 		"message_id":        dedupKey,
-		"display_name":      data.Message.SenderName,
+		"display_name":      channels.SanitizeDisplayName(data.Message.SenderName),
 		"page_name":         ch.pageName,
 	}
 
@@ -77,7 +84,7 @@ func (ch *Channel) handleMessagingEvent(data MessagingData) {
 		"direct", // Pancake inbox conversations are always treated as direct messages
 	)
 
-	slog.Info("pancake: inbound message published to bus",
+	slog.Debug("pancake: inbound message published to bus",
 		"page_id", ch.pageID,
 		"conv_id", data.ConversationID,
 		"sender_id", data.Message.SenderID,

@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/nextlevelbuilder/goclaw/internal/channels"
 	"github.com/nextlevelbuilder/goclaw/internal/store"
 )
 
@@ -35,6 +36,7 @@ func buildPrefilledUser(meta *ChannelMeta) string {
 	if tz == "" {
 		tz = "(unknown)"
 	}
+	name := channels.SanitizeDisplayName(meta.DisplayName)
 	return fmt.Sprintf(`# USER.md - About This User
 
 - **Name:** %s
@@ -44,8 +46,10 @@ func buildPrefilledUser(meta *ChannelMeta) string {
 ## Context
 
 _(First contact via %s channel. Profile info auto-filled from channel data.)_
-`, meta.DisplayName, meta.DisplayName, tz, meta.ChannelType)
+`, name, name, tz, meta.ChannelType)
 }
+
+
 
 // retryOnBusy retries fn up to 3 times on SQLITE_BUSY errors with 500ms delay.
 func retryOnBusy(fn func() error) error {

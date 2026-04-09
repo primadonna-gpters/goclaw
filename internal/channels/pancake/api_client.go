@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -220,24 +221,20 @@ func (c *APIClient) newPageRequest(ctx context.Context, method, rawURL string, b
 }
 
 // isAuthError checks if an error is an authentication/authorization failure.
+// Uses errors.As to handle wrapped errors consistently with Facebook channel pattern.
 func isAuthError(err error) bool {
-	if err == nil {
+	var ae *apiError
+	if !errors.As(err, &ae) {
 		return false
 	}
-	if ae, ok := err.(*apiError); ok {
-		// Pancake auth error codes (approximate — adjust if API docs clarify)
-		return ae.Code == 401 || ae.Code == 403 || ae.Code == 4001 || ae.Code == 4003
-	}
-	return false
+	return ae.Code == 401 || ae.Code == 403 || ae.Code == 4001 || ae.Code == 4003
 }
 
 // isRateLimitError checks if an error is a rate limit response.
 func isRateLimitError(err error) bool {
-	if err == nil {
+	var ae *apiError
+	if !errors.As(err, &ae) {
 		return false
 	}
-	if ae, ok := err.(*apiError); ok {
-		return ae.Code == 429 || ae.Code == 4029
-	}
-	return false
+	return ae.Code == 429 || ae.Code == 4029
 }
