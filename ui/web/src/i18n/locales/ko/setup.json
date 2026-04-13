@@ -1,0 +1,117 @@
+{
+  "layout": {
+    "subtitle": "게이트웨이를 설정하겠습니다"
+  },
+  "steps": {
+    "provider": "Provider",
+    "model": "모델",
+    "agent": "에이전트",
+    "channel": "채널",
+    "channelOptional": "(선택사항)"
+  },
+  "complete": {
+    "title": "설정 완료!",
+    "ready": "시스템이 준비되었습니다!",
+    "description": "Provider, 에이전트, 채널이 구성되었습니다. 대시보드에서 언제든지 관리할 수 있습니다.",
+    "goToDashboard": "대시보드로 이동"
+  },
+  "provider": {
+    "title": "LLM Provider 구성",
+    "descriptionCli": "로컬 Claude CLI 설치를 사용하여 연결합니다. API 키가 필요 없습니다.",
+    "descriptionOauth": "로그인하여 OpenAI Codex OAuth 계정을 생성합니다. 지금 별칭을 지정하고, 나중에 풀 멤버나 라운드 로빈을 위해 별칭을 더 추가하세요.",
+    "description": "에이전트를 구동할 AI Provider에 연결합니다. API 키가 필요합니다.",
+    "providerType": "Provider 유형",
+    "providerTypeHint": "연결할 LLM 서비스. 여러 모델에 접근하려면 OpenRouter를 권장합니다.",
+    "name": "이름",
+    "nameHint": "이 Provider의 내부 식별자. Provider 유형에서 자동 생성됩니다.",
+    "oauthAlias": "계정 별칭",
+    "oauthAliasPlaceholder": "예: primary",
+    "oauthAliasHint": "이 OpenAI/Codex 계정에 primary, work, team 같은 고유한 소문자 별칭을 사용하세요. 별칭은 에이전트가 사용하는 Provider/모델 접두사가 됩니다.",
+    "displayName": "표시 이름 (선택사항)",
+    "displayNameHint": "이 OpenAI/Codex 계정의 친숙한 레이블. 나중에 별칭을 더 추가할 때 유용합니다.",
+    "displayNamePlaceholder": "기본 Codex 계정",
+    "apiKey": "API 키 *",
+    "apiKeyHint": "Provider의 비밀 키. 서버 측에서 암호화되며 API 응답에 노출되지 않습니다.",
+    "apiBase": "API 기본 URL",
+    "apiBaseHint": "API 요청의 엔드포인트 URL. Provider 유형에 따라 자동 입력됩니다. 사용자 정의 프록시를 사용하는 경우에만 변경하세요.",
+    "creating": "생성 중...",
+    "create": "Provider 생성",
+    "errors": {
+      "apiKeyRequired": "API 키는 필수입니다",
+      "oauthProviderNotFound": "OAuth 인증에 성공했지만 Provider를 찾을 수 없습니다. 다시 시도해 주세요.",
+      "failedCreate": "Provider 생성에 실패했습니다"
+    }
+  },
+  "model": {
+    "title": "모델 선택 및 검증",
+    "description": "모델을 선택하고 Provider 연결이 작동하는지 검증합니다.",
+    "provider": "Provider:",
+    "model": "모델 *",
+    "modelHint": "사용할 AI 모델. 목록에서 선택하거나 목록에 없는 경우 모델 ID를 직접 입력하세요.",
+    "loadingModels": "모델 로딩 중...",
+    "selectModel": "모델을 선택하거나 모델 ID를 입력하세요",
+    "noModelsHint": "이 Provider는 모델을 나열하지 않습니다 — 모델 ID를 직접 입력하세요.",
+    "verified": "검증 완료",
+    "verify": "검증",
+    "verifying": "검증 중...",
+    "continue": "계속",
+    "modelVerified": "모델 검증 완료",
+    "modelVerifiedDesc": "{{model}}이(가) 정상적으로 작동합니다",
+    "verificationFailed": "검증에 실패했습니다. API 키와 모델을 확인하세요."
+  },
+  "agent": {
+    "title": "첫 번째 에이전트 생성",
+    "description": "에이전트는 AI 어시스턴트입니다. 이름과 성격을 커스터마이즈하세요.",
+    "provider": "Provider:",
+    "model": "모델:",
+    "displayName": "표시 이름",
+    "displayNameHint": "소환 시 에이전트 성격을 기반으로 자동 생성됩니다.",
+    "agentKey": "에이전트 키",
+    "agentKeyHint": "에이전트의 고유 식별자. 소문자, 숫자, 하이픈만 사용 가능합니다.",
+    "agentKeyPlaceholder": "my-agent",
+    "personality": "에이전트 성격",
+    "personalityHint": "에이전트의 역할과 행동을 설명하세요. AI가 소환 시 이를 기반으로 컨텍스트 파일을 생성합니다.",
+    "personalityPlaceholder": "에이전트의 성격, 목적, 행동을 설명하세요...",
+    "personalityHintBottom": "이 프롬프트를 커스터마이즈하여 에이전트의 성격과 전문성을 설정하세요.",
+    "selfEvolve": "자기 진화",
+    "selfEvolveDesc": "SOUL.md를 통해 에이전트가 시간이 지남에 따라 커뮤니케이션 스타일을 발전시킬 수 있습니다",
+    "creating": "생성 중...",
+    "create": "에이전트 생성",
+    "summoningFailed": "소환에 실패했습니다. 설정을 조정한 후 다시 시도해 주세요.",
+    "errors": {
+      "noProvider": "사용 가능한 Provider가 없습니다",
+      "failedCreate": "에이전트 생성에 실패했습니다"
+    }
+  },
+  "channel": {
+    "title": "채널 연결",
+    "description": "메시징 플랫폼을 에이전트에 연결합니다. 나중에 언제든지 채널을 추가할 수 있습니다.",
+    "skip": "건너뛰기",
+    "skipFinish": "건너뛰고 완료",
+    "agent": "에이전트:",
+    "channelType": "채널 유형",
+    "channelTypeHint": "연결할 메시징 플랫폼. 예: Telegram, Discord, Zalo.",
+    "name": "이름",
+    "nameHint": "이 채널 인스턴스의 내부 식별자. 채널 유형에서 자동 생성됩니다.",
+    "namePlaceholder": "my-telegram",
+    "displayName": "표시 이름",
+    "displayNameHint": "UI에 표시되는 친숙한 이름. 선택사항입니다.",
+    "displayNamePlaceholder": "영업 봇",
+    "credentials": "자격 증명",
+    "credentialsHint": "서버 측에서 암호화됩니다. API 응답에 반환되지 않습니다.",
+    "creating": "생성 중...",
+    "create": "채널 생성",
+    "errors": {
+      "noAgent": "사용 가능한 에이전트가 없습니다",
+      "requiredFields": "필수 항목: {{fields}}",
+      "failedCreate": "채널 생성에 실패했습니다"
+    }
+  },
+  "common": {
+    "back": "뒤로"
+  },
+  "skipSetup": "설정을 건너뛰고 대시보드로 이동",
+  "skipSetupConfirm": "설정을 건너뛰시겠습니까? 나중에 대시보드에서 언제든지 Provider와 에이전트를 구성할 수 있습니다.",
+  "switchTenant": "전환",
+  "allTenants": "모든 테넌트"
+}

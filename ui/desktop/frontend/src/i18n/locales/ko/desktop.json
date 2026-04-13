@@ -1,0 +1,159 @@
+{
+  "onboarding": {
+    "welcome": "GoClaw 설정",
+    "welcomeDesc": "게이트웨이를 설정하고 실행해 봅시다",
+    "providerStep": "프로바이더 구성",
+    "providerStepDesc": "AI 프로바이더를 선택하고 자격 증명을 입력하세요.",
+    "modelStep": "모델 선택 및 검증",
+    "modelStepDesc": "모델을 선택하고 연결을 테스트하세요.",
+    "agentStep": "에이전트 생성",
+    "agentStepDesc": "에이전트에 성격을 부여하세요.",
+    "descPlaceholder": "에이전트의 성격을 설명하세요...",
+    "complete": "설정 완료",
+    "stepProvider": "프로바이더",
+    "stepModel": "모델",
+    "stepAgent": "에이전트",
+    "createProvider": "프로바이더 생성"
+  },
+  "summoning": {
+    "title": "에이전트 소환 중",
+    "weavingSoul": "{{name}}의 영혼을 엮는 중",
+    "completed": "에이전트 준비 완료!",
+    "completedTitle": "에이전트 준비 완료!",
+    "failedTitle": "소환 실패",
+    "failed": "소환 실패",
+    "wait": "잠시 시간이 걸릴 수 있습니다",
+    "fileLabelSOUL": "핵심 성격",
+    "fileLabelIDENTITY": "정체성 및 지식",
+    "agentReady": "{{name}} 준비 완료!",
+    "retrying": "재시도 중..."
+  },
+  "settings": {
+    "title": "설정",
+    "tabs": {
+      "appearance": "외관",
+      "providers": "프로바이더",
+      "agents": "에이전트",
+      "channels": "채널",
+      "mcp": "MCP",
+      "skills": "스킬",
+      "tools": "도구",
+      "cron": "크론",
+      "traces": "트레이스",
+      "storage": "스토리지",
+      "about": "정보"
+    },
+    "theme": "테마",
+    "dark": "다크",
+    "light": "라이트",
+    "language": "언어",
+    "timezone": "시간대",
+    "timezoneHint": "상단 바의 시계 아이콘에서 시간대를 변경하세요."
+  },
+  "sidebar": {
+    "newChat": "새 채팅",
+    "connected": "연결됨",
+    "offline": "오프라인",
+    "lightMode": "라이트 모드",
+    "darkMode": "다크 모드",
+    "settings": "설정",
+    "teams": "팀"
+  },
+  "about": {
+    "title": "GoClaw Lite",
+    "subtitle": "데스크톱 에디션",
+    "version": "버전",
+    "edition": "에디션",
+    "runtime": "런타임",
+    "runtimeValue": "Wails v2",
+    "editionLimits": "에디션 제한",
+    "agents": "에이전트",
+    "teams": "팀",
+    "teamMembers": "팀 멤버",
+    "database": "데이터베이스",
+    "users": "사용자",
+    "maxAgents": "최대 5개",
+    "maxTeams": "최대 1개",
+    "maxTeamMembers": "최대 5명",
+    "databaseValue": "SQLite (로컬)",
+    "usersValue": "단일 사용자",
+    "builtWith": "Go + React + Wails로 구축",
+    "reset": {
+      "title": "위험 구역",
+      "description": "데이터베이스를 삭제하고 앱을 재시작합니다. 모든 에이전트, 세션, 프로바이더, 설정이 영구적으로 손실됩니다.",
+      "button": "데이터베이스 초기화",
+      "confirmTitle": "데이터베이스를 초기화하시겠습니까?",
+      "confirmDescription": "모든 데이터가 삭제되고 앱이 처음부터 다시 시작됩니다.",
+      "confirmPrompt": "확인하려면 {{word}}을(를) 입력하세요",
+      "cancel": "취소",
+      "confirm": "초기화 및 재시작",
+      "resetting": "초기화 중..."
+    }
+  },
+  "presets": {
+    "researcher": {
+      "label": "🔬 연구원",
+      "prompt": "Name: Scholar. A meticulous research analyst who leaves no stone unturned.\nPersonality: Methodical, thorough, and precise. Presents information in well-structured reports with citations. Balances depth with clarity.\n\nPurpose: Deep research across any domain — academic papers, market analysis, technical investigations. Synthesizes multiple sources into actionable insights. Always distinguishes facts from opinions."
+    },
+    "writer": {
+      "label": "✍️ 작가",
+      "prompt": "Name: Quill. A versatile writer who adapts voice and tone to any audience.\nPersonality: Creative, articulate, and empathetic. Understands the power of words. Balances clarity with elegance.\n\nPurpose: Content creation specialist — blog posts, articles, copywriting, storytelling, technical writing. Skilled at structuring arguments, crafting narratives, and maintaining consistent tone across long-form content."
+    },
+    "coder": {
+      "label": "👨‍💻 개발자",
+      "prompt": "Name: Dev. A senior software engineer with deep expertise across the full stack.\nPersonality: Pragmatic and efficient. Writes clean, maintainable code. Explains complex concepts simply. Follows best practices but knows when to bend rules.\n\nPurpose: Code reviews, architecture design, debugging, implementation. Proficient in multiple languages and frameworks. Prioritizes correctness, performance, and security."
+    }
+  },
+  "agent": {
+    "summon": "소환",
+    "summoning": "소환 중...",
+    "verifyModel": "모델 검증",
+    "verifying": "검증 중...",
+    "verified": "검증됨",
+    "verifyFailed": "검증 실패"
+  },
+  "chat": {
+    "emptyTitle": "{{name}}과(와) 채팅",
+    "emptyTitleDefault": "대화를 시작하세요",
+    "emptyDescAgent": "질문하거나, 무언가를 작성하거나, 아이디어를 탐색해 보세요.",
+    "emptyDescNoAgent": "시작하려면 사이드바에서 에이전트를 선택하세요.",
+    "suggestions": ["오늘 최신 뉴스가 뭐예요?", "재미있는 이야기 해 주세요", "AI 시대를 위한 아이디어를 브레인스토밍해 주세요"]
+  },
+  "activity": {
+    "thinking": "사고 중",
+    "executingTool": "도구 실행 중",
+    "compacting": "컨텍스트 압축 중",
+    "streaming": "스트리밍 중",
+    "retrying": "재시도 중",
+    "processing": "처리 중",
+    "runningTool": "{{tool}} 실행 중",
+    "retryingAttempt": "재시도 중 ({{n}}번째 시도)",
+    "step": "{{n}}단계"
+  },
+  "toast": {
+    "agentCreated": "에이전트가 생성되었습니다",
+    "agentUpdated": "에이전트가 업데이트되었습니다",
+    "agentDeleted": "에이전트가 삭제되었습니다",
+    "providerCreated": "프로바이더가 생성되었습니다",
+    "providerUpdated": "프로바이더가 업데이트되었습니다",
+    "providerDeleted": "프로바이더가 삭제되었습니다",
+    "serverCreated": "MCP 서버가 생성되었습니다",
+    "serverUpdated": "MCP 서버가 업데이트되었습니다",
+    "serverDeleted": "MCP 서버가 삭제되었습니다",
+    "skillUploaded": "스킬이 업로드되었습니다",
+    "skillDeleted": "스킬이 삭제되었습니다",
+    "grantUpdated": "권한이 업데이트되었습니다",
+    "saveFailed": "저장에 실패했습니다",
+    "deleteFailed": "삭제에 실패했습니다",
+    "createFailed": "생성에 실패했습니다"
+  },
+  "update": {
+    "available": "GoClaw Lite v{{version}}을(를) 사용할 수 있습니다",
+    "now": "지금 업데이트",
+    "downloading": "업데이트 다운로드 중...",
+    "ready": "업데이트가 설치되었습니다! 적용하려면 재시작하세요.",
+    "restart": "지금 재시작",
+    "failed": "업데이트에 실패했습니다.",
+    "retry": "재시도"
+  }
+}

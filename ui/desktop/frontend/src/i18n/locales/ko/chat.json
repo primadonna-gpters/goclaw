@@ -1,0 +1,25 @@
+{
+  "deleteChat": "채팅 삭제",
+  "deleteChatConfirm": "이 대화와 모든 메시지가 영구적으로 삭제됩니다.",
+  "newChat": "새 채팅",
+  "openSessions": "세션 열기",
+  "readOnly": "읽기 전용 — 이 세션은 다른 사용자의 세션입니다",
+  "empty": {
+    "title": "대화를 시작하세요",
+    "description": "에이전트와 채팅을 시작하려면 메시지를 보내세요."
+  },
+  "media": {
+    "image": "이미지",
+    "video": "동영상",
+    "audio": "오디오",
+    "voice": "음성 메시지",
+    "document": "문서",
+    "animation": "애니메이션",
+    "attached": "첨부됨"
+  },
+  "forwardedFrom": "전달 출처",
+  "replyingTo": "답장 대상",
+  "error": {
+    "notConnected": "연결되지 않았습니다. 연결이 완료될 때까지 기다려 주세요."
+  }
+}

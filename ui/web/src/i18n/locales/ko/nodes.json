@@ -1,0 +1,35 @@
+{
+  "title": "노드",
+  "description": "페어링된 기기 및 대기 중인 페어링 요청 관리",
+  "emptyTitle": "기기 없음",
+  "emptyDescription": "페어링된 기기 또는 대기 중인 페어링 요청이 없습니다.",
+  "pendingRequests": "대기 중인 요청 ({{count}})",
+  "pairedDevices": "페어링된 기기 ({{count}})",
+  "sender": "발신자:",
+  "chat": "채팅:",
+  "columns": {
+    "channel": "채널",
+    "senderId": "발신자 ID",
+    "paired": "페어링됨",
+    "by": "승인자",
+    "actions": "작업"
+  },
+  "approve": "승인",
+  "deny": "거부",
+  "revoke": "해제",
+  "confirmApprove": {
+    "title": "페어링 승인",
+    "description": "{{channel}}:{{senderId}} (코드: {{code}})의 페어링 요청을 승인하시겠습니까? 이 기기는 에이전트와 상호작용할 수 있게 됩니다.",
+    "confirmLabel": "승인"
+  },
+  "confirmDeny": {
+    "title": "페어링 거부",
+    "description": "{{channel}}:{{senderId}} (코드: {{code}})의 페어링 요청을 거부하시겠습니까? 요청이 삭제됩니다.",
+    "confirmLabel": "거부"
+  },
+  "confirmRevoke": {
+    "title": "기기 해제",
+    "description": "{{channel}}:{{senderId}}의 페어링을 해제하시겠습니까? 기기를 다시 페어링해야 합니다.",
+    "confirmLabel": "해제"
+  }
+}

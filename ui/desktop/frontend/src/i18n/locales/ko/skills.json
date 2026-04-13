@@ -1,0 +1,122 @@
+{
+  "title": "스킬",
+  "description": "에이전트 스킬 및 기능 관리",
+  "searchPlaceholder": "스킬 검색...",
+  "emptyTitle": "스킬이 없습니다",
+  "emptyDescription": "아직 등록된 스킬이 없습니다.",
+  "noMatchTitle": "일치하는 스킬이 없습니다",
+  "noMatchDescription": "다른 검색어를 입력해 보세요.",
+  "columns": {
+    "name": "이름",
+    "description": "설명",
+    "source": "소스",
+    "author": "작성자",
+    "visibility": "공개 범위",
+    "status": "상태",
+    "actions": "작업"
+  },
+  "noDescription": "설명 없음",
+  "visibility": {
+    "clickToCycle": "클릭하여 공개 범위 변경"
+  },
+  "delete": {
+    "title": "스킬 삭제",
+    "description": "\"{{name}}\"을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+    "confirmLabel": "삭제"
+  },
+  "upload": {
+    "title": "스킬 업로드",
+    "description": "YAML 프론트매터(name, description, slug)가 포함된 SKILL.md가 들어있는 ZIP 파일을 업로드하세요.",
+    "button": "업로드",
+    "uploading": "업로드 중...",
+    "dropOrClick": "클릭하거나 .zip 파일을 드래그 앤 드롭하세요",
+    "dropHere": ".zip 파일을 여기에 놓으세요",
+    "onlyZip": ".zip 파일만 허용됩니다",
+    "cancel": "취소",
+    "done": "완료",
+    "tooLarge": "파일이 20MB 제한을 초과합니다",
+    "invalidZip": "잘못된 ZIP 파일",
+    "noSkillMd": "ZIP 루트에 SKILL.md가 있어야 합니다",
+    "emptySkillMd": "SKILL.md가 비어 있습니다",
+    "noFrontmatter": "SKILL.md에 YAML 프론트매터가 없습니다",
+    "nameRequired": "SKILL.md 프론트매터에 name이 필요합니다",
+    "invalidSlug": "잘못된 slug 형식",
+    "failed": "업로드 실패",
+    "validating": "검증 중...",
+    "validCount": "{{total}}개 중 {{valid}}개 유효",
+    "uploadCount": "업로드 ({{count}})",
+    "successCount": "{{total}}개 중 {{success}}개 업로드 성공",
+    "remove": "파일 제거"
+  },
+  "edit": {
+    "title": "스킬 편집",
+    "name": "이름",
+    "description": "설명",
+    "visibility": "공개 범위",
+    "tags": "태그",
+    "addTag": "태그 추가...",
+    "add": "추가",
+    "cancel": "취소",
+    "save": "저장",
+    "saving": "저장 중...",
+    "privateOption": "비공개 (소유자만)",
+    "internalOption": "내부 (부여된 에이전트/사용자)",
+    "publicOption": "공개 (모든 에이전트)"
+  },
+  "system": "시스템",
+  "tabs": {
+    "core": "핵심",
+    "custom": "사용자 정의"
+  },
+  "toggle": {
+    "enable": "스킬 활성화",
+    "disable": "스킬 비활성화",
+    "disabled": "비활성화됨"
+  },
+  "tenant": {
+    "enabled": "활성화",
+    "disabled": "비활성화",
+    "default": "기본값",
+    "overrideHint": "이 스킬에 대한 테넌트별 재정의",
+    "resetDefault": "기본값으로 재설정"
+  },
+  "deps": {
+    "rescan": "의존성 재스캔",
+    "rescanning": "스캔 중...",
+    "rescanSuccess": "{{count}}개 스킬 업데이트됨",
+    "missing": "누락: {{deps}}",
+    "install": "의존성 설치",
+    "installing": "설치 중...",
+    "installSuccess": "의존성이 성공적으로 설치되었습니다",
+    "installPartial": "일부 의존성 설치에 실패했습니다",
+    "installItem": "설치",
+    "itemSuccess": "설치됨",
+    "itemError": "실패",
+    "missingTitle": "누락된 의존성",
+    "systemLabel": "시스템",
+    "pythonLabel": "Python",
+    "nodeLabel": "Node.js",
+    "statusActive": "활성",
+    "statusArchived": "의존성 누락",
+    "runtimeMissing": "런타임 사전 요구사항 누락",
+    "runtimeMissingDesc": "핵심 스킬은 Python 및/또는 Node.js 런타임이 필요합니다. ENABLE_PYTHON=true, ENABLE_NODE=true 또는 ENABLE_FULL_SKILLS=true로 재빌드하거나 수동으로 설치하세요.",
+    "runtimeRequired": "먼저 런타임을 설치하세요"
+  },
+  "detail": {
+    "title": "스킬 상세",
+    "content": "내용",
+    "files": "파일",
+    "version": "버전:",
+    "current": "(현재)",
+    "noContent": "사용 가능한 내용이 없습니다."
+  },
+  "toast": {
+    "updated": "스킬이 업데이트되었습니다",
+    "updateFailed": "스킬 업데이트에 실패했습니다",
+    "deleted": "스킬이 삭제되었습니다",
+    "deleteFailed": "스킬 삭제에 실패했습니다",
+    "rescanUpdated": "{{count}}개 스킬이 업데이트되었습니다",
+    "rescanNoChanges": "모든 스킬이 최신 상태입니다",
+    "rescanFailed": "의존성 재스캔에 실패했습니다"
+  }
+}

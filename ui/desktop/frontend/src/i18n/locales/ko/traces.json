@@ -1,0 +1,63 @@
+{
+  "title": "트레이스",
+  "description": "LLM 호출 트레이스 및 성능 데이터",
+  "filterPlaceholder": "에이전트 ID로 필터...",
+  "filter": "필터",
+  "allAgents": "모든 에이전트",
+  "allChannels": "모든 채널",
+  "emptyTitle": "트레이스가 없습니다",
+  "emptyDescription": "트레이스를 찾을 수 없습니다. 에이전트가 요청을 처리할 때 트레이스가 기록됩니다.",
+  "columns": {
+    "name": "이름",
+    "status": "상태",
+    "duration": "소요 시간",
+    "tokens": "토큰",
+    "spans": "스팬",
+    "time": "시간"
+  },
+  "unnamed": "이름 없음",
+  "stopRun": "실행 중지",
+  "cached": "캐시됨",
+  "detail": {
+    "title": "트레이스 상세",
+    "copyTraceId": "트레이스 ID 복사",
+    "notFound": "트레이스를 찾을 수 없습니다.",
+    "name": "이름:",
+    "status": "상태:",
+    "duration": "소요 시간:",
+    "channel": "채널:",
+    "tokens": "토큰:",
+    "spans": "스팬:",
+    "started": "시작:",
+    "delegatedFrom": "위임 출처:",
+    "createdAt": "생성일:",
+    "input": "입력",
+    "output": "출력",
+    "copy": "복사",
+    "spansCount": "스팬 ({{count}})",
+    "llmCalls": "LLM",
+    "toolCalls": "도구",
+    "export": "트레이스 내보내기",
+    "stopRun": "실행 중지"
+  },
+  "span": {
+    "model": "모델:",
+    "tokens": "토큰:",
+    "createdAt": "생성일:",
+    "input": "입력:",
+    "output": "출력:",
+    "copy": "복사",
+    "startTime": "시작:",
+    "endTime": "종료:",
+    "cacheRead": "읽기",
+    "cacheWrite": "쓰기",
+    "thinking": "사고",
+    "cached": "캐시됨"
+  },
+  "toast": {
+    "failedLoad": "트레이스 로드에 실패했습니다",
+    "abortSent": "실행이 중지되었습니다",
+    "abortFailed": "실행 중지에 실패했습니다",
+    "abortNotFound": "실행이 이미 완료되었거나 찾을 수 없습니다"
+  }
+}
