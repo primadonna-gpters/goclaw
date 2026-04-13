@@ -37,6 +37,23 @@ import viTeams from './locales/vi/teams.json'
 import viChannels from './locales/vi/channels.json'
 import viTts from './locales/vi/tts.json'
 
+// --- KO namespaces ---
+import koCommon from './locales/ko/common.json'
+import koChat from './locales/ko/chat.json'
+import koAgents from './locales/ko/agents.json'
+import koProviders from './locales/ko/providers.json'
+import koSkills from './locales/ko/skills.json'
+import koCron from './locales/ko/cron.json'
+import koMcp from './locales/ko/mcp.json'
+import koTools from './locales/ko/tools.json'
+import koTraces from './locales/ko/traces.json'
+import koMemory from './locales/ko/memory.json'
+import koStorage from './locales/ko/storage.json'
+import koSessions from './locales/ko/sessions.json'
+import koDesktop from './locales/ko/desktop.json'
+import koTeams from './locales/ko/teams.json'
+import koChannels from './locales/ko/channels.json'
+
 // --- ZH namespaces ---
 import zhCommon from './locales/zh/common.json'
 import zhChat from './locales/zh/chat.json'
@@ -59,8 +76,9 @@ const STORAGE_KEY = 'goclaw:language'
 
 function getInitialLanguage(): string {
   const stored = localStorage.getItem(STORAGE_KEY)
-  if (stored === 'en' || stored === 'vi' || stored === 'zh') return stored
+  if (stored === 'en' || stored === 'ko' || stored === 'vi' || stored === 'zh') return stored
   const lang = navigator.language.toLowerCase()
+  if (lang.startsWith('ko')) return 'ko'
   if (lang.startsWith('vi')) return 'vi'
   if (lang.startsWith('zh')) return 'zh'
   return 'vi'
@@ -73,6 +91,12 @@ i18n.use(initReactI18next).init({
       skills: enSkills, cron: enCron, mcp: enMcp, tools: enTools,
       traces: enTraces, memory: enMemory, storage: enStorage, sessions: enSessions,
       desktop: enDesktop, teams: enTeams, channels: enChannels, tts: enTts,
+    },
+    ko: {
+      common: koCommon, chat: koChat, agents: koAgents, providers: koProviders,
+      skills: koSkills, cron: koCron, mcp: koMcp, tools: koTools,
+      traces: koTraces, memory: koMemory, storage: koStorage, sessions: koSessions,
+      desktop: koDesktop, teams: koTeams, channels: koChannels,
     },
     vi: {
       common: viCommon, chat: viChat, agents: viAgents, providers: viProviders,

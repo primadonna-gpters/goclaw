@@ -3,6 +3,7 @@ import { useUiStore } from '../../stores/ui-store'
 
 const LANGUAGES = [
   { value: 'en', label: 'English' },
+  { value: 'ko', label: '한국어' },
   { value: 'vi', label: 'Tiếng Việt' },
   { value: 'zh', label: '中文' },
 ] as const

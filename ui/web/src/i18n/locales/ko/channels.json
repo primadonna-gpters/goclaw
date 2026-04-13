@@ -1,0 +1,487 @@
+{
+  "title": "채널",
+  "description": "채널 인스턴스를 관리합니다",
+  "statusDescription": "통신 채널 상태",
+  "addChannel": "채널 추가",
+  "refresh": "새로고침",
+  "searchPlaceholder": "채널 검색...",
+  "emptyTitle": "채널 없음",
+  "emptyDescription": "첫 번째 채널 인스턴스를 추가하여 시작하세요.",
+  "emptyStatusDescription": "구성된 통신 채널이 없습니다.",
+  "noMatchTitle": "일치하는 채널이 없습니다",
+  "noMatchDescription": "다른 검색어를 시도해 보세요.",
+  "columns": {
+    "name": "이름",
+    "type": "유형",
+    "agent": "에이전트",
+    "status": "상태",
+    "enabled": "활성화",
+    "actions": "작업"
+  },
+  "status": {
+    "running": "실행 중",
+    "stopped": "중지됨",
+    "checking": "확인 중",
+    "degraded": "저하",
+    "starting": "시작 중",
+    "registered": "구성됨",
+    "failed": "실패"
+  },
+  "enabled": "활성화",
+  "disabled": "비활성화",
+  "actions": {
+    "reauthenticate": "재인증",
+    "authenticate": "채널 시작을 위해 인증",
+    "reauthShort": "재인증",
+    "openCredentials": "자격 증명 열기",
+    "openAdvanced": "고급 설정 열기",
+    "inspect": "문제 점검"
+  },
+  "list": {
+    "failureStreak": "연속 {{count}}회 실패",
+    "openChannelDetail": "최신 진단을 위해 채널 상세를 열어보세요",
+    "nextStep": "다음 단계"
+  },
+  "failureKind": {
+    "auth": "인증",
+    "config": "구성",
+    "network": "네트워크",
+    "unknown": "주의"
+  },
+  "delete": {
+    "title": "채널 인스턴스 삭제",
+    "description": "\"{{name}}\"을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+    "confirmLabel": "삭제"
+  },
+  "form": {
+    "createTitle": "채널 인스턴스 생성",
+    "editTitle": "채널 인스턴스 편집",
+    "key": "키 *",
+    "keyPlaceholder": "my-telegram-bot",
+    "keyHint": "채널 식별자로 사용되는 고유 slug",
+    "displayName": "표시 이름",
+    "displayNamePlaceholder": "영업 봇",
+    "channelType": "채널 유형 *",
+    "agent": "에이전트 *",
+    "selectAgent": "에이전트 선택",
+    "credentials": "자격 증명",
+    "credentialsHint": "(현재 값을 유지하려면 비워두세요)",
+    "credentialsEncrypted": "서버 측에서 암호화됩니다. API 응답에 반환되지 않습니다.",
+    "configuration": "구성",
+    "enabled": "활성화",
+    "cancel": "취소",
+    "create": "생성",
+    "update": "업데이트",
+    "saving": "저장 중...",
+    "step": "{{total}} 단계 중 {{current}} 단계",
+    "authenticate": "인증 — {{label}}",
+    "configure": "구성 — {{label}}",
+    "skip": "건너뛰기",
+    "done": "완료",
+    "errors": {
+      "keyRequired": "키는 필수입니다",
+      "keySlug": "키는 유효한 slug여야 합니다 (소문자, 숫자, 하이픈만)",
+      "agentRequired": "에이전트는 필수입니다",
+      "requiredFields": "필수: {{fields}}",
+      "failedSave": "저장 실패",
+      "failedSaveConfig": "구성 저장 실패"
+    },
+    "authStatus": {
+      "authenticated": "인증됨",
+      "notAuthenticated": "인증되지 않음",
+      "useQrHint": "— 채널 테이블의 QR 로그인 버튼을 사용하세요"
+    }
+  },
+  "detail": {
+    "agent": "에이전트: {{name}}",
+    "lastChecked": "마지막 확인: {{value}}",
+    "checkedRelative": "{{value}} 전 확인",
+    "advanced": "고급",
+    "advancedTitle": "고급 설정",
+    "policies": "정책",
+    "policiesDesc": "메시지 처리 정책",
+    "network": "네트워크",
+    "networkDesc": "서버 및 프록시 구성",
+    "limits": "제한",
+    "limitsDesc": "메시지 및 미디어 제약",
+    "streaming": "스트리밍",
+    "streamingDesc": "실시간 메시지 스트리밍 옵션",
+    "behavior": "동작",
+    "behaviorDesc": "응답 동작 구성",
+    "accessControl": "접근 제어",
+    "accessControlDesc": "사용자 접근 제한",
+    "reviewDiagnostics": "설정을 변경하기 전에 이 채널의 최신 진단을 확인하세요.",
+    "whatHappened": "발생한 문제",
+    "recommendedAction": "권장 조치",
+    "technicalDetail": "기술 상세",
+    "tabs": {
+      "general": "일반",
+      "config": "구성",
+      "credentials": "자격 증명",
+      "groups": "그룹",
+      "managers": "관리자"
+    },
+    "general": {
+      "identity": "신원",
+      "name": "이름",
+      "nameHint": "고유 slug (읽기 전용)",
+      "channelType": "채널 유형",
+      "displayName": "표시 이름",
+      "displayNamePlaceholder": "친근한 이름",
+      "agent": "에이전트",
+      "selectAgent": "에이전트 선택",
+      "enabled": "활성화",
+      "saved": "저장됨",
+      "saveChanges": "변경사항 저장",
+      "saving": "저장 중..."
+    },
+    "credentials": {
+      "hint": "현재 값을 유지하려면 필드를 비워두세요. 자격 증명은 서버 측에서 암호화되며 API 응답에 반환되지 않습니다.",
+      "noSchema": "이 채널 유형에 대한 자격 증명 스키마가 없습니다.",
+      "noCredentials": "업데이트할 자격 증명 없음",
+      "failedSave": "저장 실패",
+      "saved": "저장됨",
+      "updateCredentials": "자격 증명 업데이트",
+      "saving": "저장 중..."
+    },
+    "config": {
+      "noSchema": "이 채널 유형에 대한 구성 스키마가 없습니다.",
+      "saved": "저장됨",
+      "saveConfig": "구성 저장",
+      "saving": "저장 중...",
+      "webhookUrlLabel": "이것을 Lark 앱의 이벤트 요청 URL로 설정하세요:",
+      "copyPath": "경로 복사"
+    },
+    "groups": {
+      "saved": "저장됨",
+      "saveGroups": "그룹 저장",
+      "saving": "저장 중..."
+    },
+    "timeline": {
+      "title": "타임라인",
+      "firstFailed": "첫 실패",
+      "lastChecked": "마지막 확인",
+      "failures": "실패",
+      "failureStreak": "연속 {{count}}회",
+      "failureTotal": "총 {{count}}회",
+      "lastHealthy": "마지막 정상",
+      "noData": "아직 기록된 최근 채널 확인이 없습니다."
+    },
+    "managers": {
+      "description": "그룹 채팅에서 관리자 권한을 가진 사용자를 관리합니다.",
+      "groups": "그룹",
+      "noManagerGroups": "관리자 그룹 없음",
+      "noManagerGroupsHint": "아래 양식을 사용하여 그룹에 관리자를 추가하세요.",
+      "loadingManagers": "관리자 로딩 중...",
+      "noManagers": "이 그룹에 관리자가 없습니다.",
+      "managersCount": "관리자 {{count}}명",
+      "managersCountPlural": "관리자 {{count}}명",
+      "searchContacts": "연락처 검색...",
+      "noResults": "연락처를 찾을 수 없습니다",
+      "columns": {
+        "userId": "사용자 ID",
+        "name": "이름",
+        "username": "사용자명"
+      },
+      "addForm": {
+        "title": "새 그룹에 관리자 추가",
+        "hint": "위 목록에 나타나지 않는 그룹에 관리자를 추가합니다.",
+        "groupId": "그룹 ID *",
+        "groupIdPlaceholder": "예: group:telegram:-100123456",
+        "userId": "사용자 ID *",
+        "userIdPlaceholder": "사용자 ID 검색 또는 입력",
+        "displayName": "표시 이름",
+        "username": "사용자명",
+        "optional": "선택 사항",
+        "usernameWithout": "선택 사항 (@ 제외)",
+        "adding": "추가 중...",
+        "addManager": "관리자 추가",
+        "add": "추가",
+        "errors": {
+          "groupUserRequired": "그룹 ID와 사용자 ID가 필요합니다",
+          "failedAdd": "관리자 추가 실패"
+        }
+      }
+    }
+  },
+  "fieldConfig": {
+    "token": { "label": "봇 토큰", "help": "@BotFather에서 발급" },
+    "bot_token": { "label": "봇 토큰" },
+    "app_token": {
+      "label": "앱 레벨 토큰",
+      "help": "connections:write 범위의 앱 레벨 토큰 (Socket Mode에 필요)"
+    },
+    "user_token": {
+      "label": "사용자 토큰 (선택 사항)",
+      "help": "선택 사항: 사용자 정의 봇 신원을 위한 User OAuth 토큰. 기본 봇 신원을 사용하려면 비워두세요."
+    },
+    "app_id": { "label": "앱 ID" },
+    "app_secret": { "label": "앱 시크릿" },
+    "encrypt_key": { "label": "암호화 키", "help": "Webhook 모드용" },
+    "verification_token": {
+      "label": "인증 토큰",
+      "help": "Webhook 모드용"
+    },
+    "webhook_secret": { "label": "Webhook 시크릿" },
+    "api_server": {
+      "label": "API 서버 URL",
+      "help": "대용량 파일 업로드(최대 2GB)를 위한 사용자 정의 Telegram Bot API 서버. 기본값을 사용하려면 비워두세요."
+    },
+    "proxy": {
+      "label": "HTTP 프록시",
+      "help": "HTTP 프록시를 통해 봇 트래픽을 라우팅"
+    },
+    "dm_policy": { "label": "DM 정책" },
+    "group_policy": { "label": "그룹 정책" },
+    "require_mention": {
+      "label": "그룹에서 @멘션 필요",
+      "disabledHint": "멀티봇 모드는 항상 모든 메시지를 수신합니다"
+    },
+    "mention_mode": {
+      "label": "그룹 응답 동작",
+      "help": "여러 봇이 있는 그룹에서 봇이 응답할 시기를 결정하는 방식입니다."
+    },
+    "history_limit": {
+      "label": "그룹 히스토리 제한",
+      "help": "컨텍스트용 대기 그룹 메시지 최대 수 (0 = 비활성화)"
+    },
+    "dm_stream": {
+      "label": "DM 스트리밍",
+      "help": "DM에서 응답을 점진적으로 스트리밍"
+    },
+    "group_stream": {
+      "label": "그룹 스트리밍",
+      "help": "그룹에서 응답을 점진적으로 스트리밍"
+    },
+    "draft_transport": {
+      "label": "드래프트 미리보기",
+      "help": "DM에서 응답 스트리밍에 스텔스 드래프트 미리보기 사용 — 편집당 알림 없음 (DM 스트리밍 필요)"
+    },
+    "reasoning_stream": {
+      "label": "추론 표시",
+      "help": "답변 전에 AI 사고 과정을 별도 메시지로 표시 (스트리밍 필요)"
+    },
+    "reaction_level": { "label": "리액션 수준" },
+    "media_max_mb": { "label": "최대 미디어 크기 (MB)" },
+    "link_preview": { "label": "링크 미리보기" },
+    "allow_from": { "label": "허용된 사용자" },
+    "block_reply": {
+      "label": "블록 응답",
+      "help": "도구 반복 중 중간 텍스트를 전달"
+    },
+    "domain": { "label": "도메인" },
+    "connection_mode": {
+      "label": "연결 모드",
+      "help": "WebSocket은 공용 IP가 필요 없음 — 아웃바운드 연결만"
+    },
+    "webhook_port": {
+      "label": "Webhook 포트",
+      "help": "0 = 메인 게이트웨이 포트 공유 (권장)"
+    },
+    "webhook_path": {
+      "label": "Webhook 경로",
+      "help": "Lark 이벤트를 위한 메인 서버 경로"
+    },
+    "webhook_url": { "label": "Webhook URL" },
+    "topic_session_mode": {
+      "label": "토픽 세션 모드",
+      "help": "세션 격리를 위해 스레드 root_id 사용"
+    },
+    "render_mode": { "label": "렌더링 모드" },
+    "text_chunk_limit": {
+      "label": "텍스트 청크 제한",
+      "help": "메시지당 최대 문자 수"
+    },
+    "group_allow_from": {
+      "label": "그룹 허용 사용자",
+      "help": "그룹 발신자를 위한 별도 허용 목록"
+    },
+    "native_stream": {
+      "label": "네이티브 스트리밍 (에이전트 & AI 앱)",
+      "help": "Slack의 ChatStreamer API를 사용한 네이티브 스트리밍. 사용 불가 시 편집 기반으로 대체."
+    },
+    "debounce_delay": {
+      "label": "디바운스 지연 (ms)",
+      "help": "빠른 메시지 발송 전 대기 시간(밀리초). 0으로 설정하면 비활성화."
+    },
+    "thread_ttl": {
+      "label": "스레드 참여 TTL (시간)",
+      "help": "봇이 참여한 스레드에서 자동 응답을 중단하기까지의 시간. 0 = 항상 @멘션 필요."
+    },
+    "skills": {
+      "label": "스킬 필터",
+      "help": "이 그룹에서 사용 가능한 스킬 제한"
+    },
+    "tools": {
+      "label": "도구 허용 목록",
+      "help": "이 그룹에서 에이전트가 사용할 수 있는 도구 제한"
+    },
+    "system_prompt": { "label": "시스템 프롬프트" }
+  },
+  "fieldOptions": {
+    "block_reply": {
+      "inherit": "게이트웨이에서 상속",
+      "true": "활성화",
+      "false": "비활성화"
+    },
+    "dm_policy": {
+      "pairing": "페어링 (코드 필요)",
+      "open": "오픈 (모두 수락)",
+      "allowlist": "허용 목록만",
+      "disabled": "비활성화"
+    },
+    "group_policy": {
+      "open": "오픈 (모두 수락)",
+      "pairing": "페어링 (승인 필요)",
+      "allowlist": "허용 목록만",
+      "disabled": "비활성화"
+    },
+    "mention_mode": {
+      "strict": "기본 (@멘션 설정 따름)",
+      "yield": "멀티봇 (다른 봇이 @멘션되지 않으면 응답)"
+    },
+    "reaction_level": {
+      "off": "끔",
+      "minimal": "최소",
+      "full": "전체"
+    },
+    "domain": {
+      "lark": "Lark (글로벌)",
+      "feishu": "Feishu (중국)"
+    },
+    "connection_mode": {
+      "webhook": "Webhook",
+      "websocket": "WebSocket (권장)"
+    },
+    "topic_session_mode": {
+      "disabled": "비활성화",
+      "enabled": "활성화"
+    },
+    "render_mode": {
+      "auto": "자동",
+      "raw": "원시",
+      "card": "카드"
+    }
+  },
+  "groupOverrides": {
+    "title": "그룹 및 토픽 재정의",
+    "hint": "그룹 채팅 또는 포럼 토픽별로 채널 기본값을 재정의합니다. 와일드카드 기본값으로 \"*\"을 그룹 ID로 사용하세요.",
+    "groupLabel": "그룹: {{id}}",
+    "groupWildcard": "* (와일드카드)",
+    "addGroupPlaceholder": "채팅 ID (예: -100123456) 또는 *",
+    "addGroup": "그룹 추가",
+    "knownGroups": "알려진 그룹",
+    "topicOverrides": "토픽 재정의",
+    "topicLabel": "토픽: {{id}}",
+    "addTopicPlaceholder": "토픽 스레드 ID",
+    "addTopic": "토픽 추가",
+    "fieldConfig": {
+      "dm_stream": {
+        "label": "DM 스트리밍",
+        "help": "DM에서 응답을 점진적으로 스트리밍"
+      },
+      "group_stream": {
+        "label": "그룹 스트리밍",
+        "help": "그룹에서 응답을 점진적으로 스트리밍"
+      },
+      "draft_transport": {
+        "label": "드래프트 미리보기",
+        "help": "DM에서 응답 스트리밍에 스텔스 드래프트 미리보기 사용 — 편집당 알림 없음 (DM 스트리밍 필요)"
+      },
+      "reasoning_stream": {
+        "label": "추론 표시",
+        "help": "답변 전에 AI 사고 과정을 별도 메시지로 표시 (스트리밍 필요)"
+      }
+    },
+    "fields": {
+      "groupPolicy": "그룹 정책",
+      "requireMention": "@멘션 필요",
+      "enabled": "활성화",
+      "allowedUsers": "허용된 사용자",
+      "allowedUsersPlaceholder": "줄당 하나의 사용자 ID 또는 쉼표로 구분",
+      "skillsFilter": "스킬 필터",
+      "skillsPlaceholder": "줄당 하나의 스킬 이름 (비어 있으면 상속)",
+      "toolAllow": "도구 허용",
+      "toolAllowPlaceholder": "허용할 도구 선택 (비어 있으면 모두 상속)...",
+      "toolAllowHint": "이 그룹에서 사용 가능한 도구를 제한합니다. \"group:web\", \"group:fs\" 같은 그룹 이름을 지원합니다. 비어 있으면 모든 도구를 상속합니다.",
+      "systemPrompt": "시스템 프롬프트",
+      "systemPromptPlaceholder": "이 그룹/토픽을 위한 추가 시스템 프롬프트",
+      "inherit": "상속 (채널 기본값)",
+      "yes": "예",
+      "no": "아니오"
+    }
+  },
+  "wizard": {
+    "zaloPersonal": {
+      "createLabel": "생성 및 인증",
+      "formBanner": "생성 후 QR 코드로 인증하고 허용된 사용자를 구성합니다."
+    },
+    "whatsapp": {
+      "createLabel": "생성 및 QR 스캔",
+      "formBanner": "생성 후 WhatsApp으로 QR 코드를 스캔하여 인증합니다."
+    }
+  },
+  "fallback": {
+    "authRequiredSummary": "인증이 필요합니다",
+    "authRequiredDetail": "채널 인스턴스가 활성화되어 있지만 연결 전에 로그인이 필요합니다.",
+    "authRequiredHeadline": "채널 세션 재연결",
+    "authRequiredHint": "현재 세션을 복원하려면 이 채널을 다시 인증하세요.",
+    "missingCredentialsSummary": "자격 증명 누락",
+    "missingCredentialsDetail": "채널 인스턴스가 활성화되어 있지만 필수 자격 증명이 불완전합니다.",
+    "missingCredentialsHeadline": "필수 자격 증명 완성",
+    "missingCredentialsHint": "자격 증명을 열고 이 채널의 누락된 값 또는 잘못된 값을 입력하세요."
+  },
+  "scopes": {
+    "title": "필수 API 권한",
+    "description": "Lark/Feishu 앱에 개발자 콘솔에서 이 범위가 활성화되어 있어야 합니다. 권한 추가 후 새 앱 버전을 게시하세요.",
+    "publishReminder": "범위 추가 후 연락처 범위를 \"모든 멤버\"로 설정하고 변경 사항이 적용되도록 새 앱 버전을 게시하세요."
+  },
+  "toast": {
+    "created": "채널이 생성되었습니다",
+    "createdDesc": "{{name}}이(가) 추가되었습니다",
+    "updated": "채널이 업데이트되었습니다",
+    "deleted": "채널이 삭제되었습니다",
+    "failedCreate": "채널 생성 실패",
+    "failedUpdate": "채널 업데이트 실패",
+    "failedDelete": "채널 삭제 실패"
+  },
+  "zalo": {
+    "allowedUsers": "허용된 사용자",
+    "loadContacts": "연락처 로드",
+    "loading": "로딩 중...",
+    "searchContacts": "연락처 검색...",
+    "friends": "친구",
+    "groups": "그룹",
+    "membersCount": "멤버 {{count}}명",
+    "noContacts": "연락처를 찾을 수 없습니다",
+    "noContactsMatch": "\"{{search}}\"와 일치하는 연락처가 없습니다",
+    "addManualPlaceholder": "수동으로 ID 추가",
+    "add": "추가",
+    "zaloIdsHint": "Zalo 사용자 ID 또는 그룹 ID",
+    "completeQrLogin": "연락처를 로드하려면 QR 로그인을 완료하세요",
+    "loginQr": "QR 로그인 — {{name}}",
+    "loginSuccessful": "로그인 성공! 채널 시작 중...",
+    "generatingQr": "QR 코드 생성 중...",
+    "scanHint": "Zalo 앱으로 스캔하세요 (~100초 후 만료)",
+    "loginSuccessLoading": "로그인 성공! 연락처 로딩 중...",
+    "retry": "재시도",
+    "close": "닫기",
+    "skip": "건너뛰기"
+  },
+  "whatsapp": {
+    "loginSuccessLoading": "WhatsApp 연결됨! 채널 로딩 중...",
+    "waitingForQr": "QR 코드 대기 중...",
+    "scanHint": "WhatsApp 열기 → 프로필 → 연결된 기기 → 기기 연결",
+    "initializing": "초기화 중...",
+    "skip": "건너뛰기",
+    "retry": "재시도",
+    "close": "닫기",
+    "reauthTitle": "WhatsApp 연결 — {{name}}",
+    "reauthDescription": "WhatsApp으로 QR 코드를 스캔하여 기기를 연결하세요.",
+    "alreadyLinked": "기기가 이미 연결되어 있습니다",
+    "alreadyLinkedDetail": "WhatsApp이 연결되어 있습니다. 다른 기기를 연결하려면 재연결을 클릭하세요 — 현재 세션이 로그아웃됩니다.",
+    "relinkDevice": "기기 재연결",
+    "connectedSuccess": "WhatsApp이 성공적으로 연결되었습니다!",
+    "tabQrCode": "QR 코드"
+  }
+}

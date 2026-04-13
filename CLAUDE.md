@@ -35,7 +35,7 @@ internal/
 │   └── methods/              RPC handlers (chat, agents, sessions, config, skills, cron, pairing)
 ├── hooks/                    Hook system for extensibility
 ├── http/                     HTTP API (/v1/chat/completions, /v1/agents, /v1/skills, etc.)
-├── i18n/                     Message catalog: T(locale, key, args...) + per-locale catalogs (en/vi/zh)
+├── i18n/                     Message catalog: T(locale, key, args...) + per-locale catalogs (en/ko/vi/zh)
 ├── knowledgegraph/           Knowledge graph storage and traversal
 ├── mcp/                      Model Context Protocol bridge/server
 ├── media/                    Media handling utilities
@@ -89,7 +89,7 @@ ui/desktop/                   Wails v2 desktop app (React frontend + embedded ga
 - **Config:** JSON5 at `GOCLAW_CONFIG` env. Secrets in `.env.local` or env vars, never in config.json
 - **Security:** Rate limiting, input guard (detection-only), CORS, shell deny patterns, SSRF protection, path traversal prevention, AES-256-GCM encryption. All security logs: `slog.Warn("security.*")`
 - **Telegram formatting:** LLM output → `SanitizeAssistantContent()` → `markdownToTelegramHTML()` → `chunkHTML()` → `sendHTML()`. Tables rendered as ASCII in `<pre>` tags
-- **i18n:** Web UI uses `i18next` with namespace-split locale files in `ui/web/src/i18n/locales/{lang}/`. Backend uses `internal/i18n` message catalog with `i18n.T(locale, key, args...)`. Locale propagated via `store.WithLocale(ctx)` — WS `connect` param `locale`, HTTP `Accept-Language` header. Supported: en (default), vi, zh. New user-facing strings: add key to `internal/i18n/keys.go`, add translations to all 3 catalog files. New UI strings: add key to all 3 locale dirs. Bootstrap templates (SOUL.md, etc.) stay English-only (LLM consumption).
+- **i18n:** Web UI uses `i18next` with namespace-split locale files in `ui/web/src/i18n/locales/{lang}/`. Backend uses `internal/i18n` message catalog with `i18n.T(locale, key, args...)`. Locale propagated via `store.WithLocale(ctx)` — WS `connect` param `locale`, HTTP `Accept-Language` header. Supported: en (default), ko, vi, zh. New user-facing strings: add key to `internal/i18n/keys.go`, add translations to all 4 catalog files. New UI strings: add key to all 4 locale dirs. Bootstrap templates (SOUL.md, etc.) stay English-only (LLM consumption).
 
 ## Running
 
@@ -240,7 +240,7 @@ Go conventions to follow:
 - Use `append(dst, src...)` instead of loop-based append
 - Always handle errors; don't ignore return values
 - **Migrations (dual-DB):** PostgreSQL and SQLite have **separate migration systems**. When adding schema changes: (1) PG: add SQL in `migrations/` + bump `RequiredSchemaVersion` in `internal/upgrade/version.go`. (2) SQLite: update `internal/store/sqlitestore/schema.sql` (full schema for fresh DBs) + add incremental patch in `schema.go` `migrations` map + bump `SchemaVersion` constant. **Always update both** — missing SQLite migrations cause desktop edition to crash on startup
-- **i18n strings:** When adding user-facing error messages, add key to `internal/i18n/keys.go` and translations to `catalog_en.go`, `catalog_vi.go`, `catalog_zh.go`. For UI strings, add to all locale JSON files in `ui/web/src/i18n/locales/{en,vi,zh}/`
+- **i18n strings:** When adding user-facing error messages, add key to `internal/i18n/keys.go` and translations to `catalog_en.go`, `catalog_ko.go`, `catalog_vi.go`, `catalog_zh.go`. For UI strings, add to all locale JSON files in `ui/web/src/i18n/locales/{en,ko,vi,zh}/`
 - **SQL safety:** When implementing or modifying SQL store code (`store/pg/*.go`), always verify: (1) All user inputs use parameterized queries (`$1, $2, ...`), never string concatenation — prevents SQL injection. (2) Queries are optimized — no N+1 queries, no unnecessary full table scans. (3) WHERE clauses, JOINs, and ORDER BY columns use existing indices — check migration files for available indexes
 - **DB query reuse:** Before adding a new DB query for key entities (teams, agents, sessions, users), check if the same data is already fetched earlier in the current flow/pipeline. Prefer passing resolved data through context, event payloads, or function params rather than re-querying. Duplicate queries waste DB resources and add latency
 - **Solution design:** When designing a fix or feature, identify the root cause first — don't just patch symptoms. Think through production scenarios (high concurrency, multi-tenant isolation, failure cascades, long-running sessions) to ensure the solution holds up. Prefer explicit configuration over runtime heuristics. Prefer the simplest solution that addresses the root cause directly

@@ -1,0 +1,157 @@
+{
+  "title": "채널",
+  "description": "메시징 앱을 에이전트에 연결",
+  "addChannel": "채널 추가",
+  "atLimit": "Lite 에디션: 최대 Telegram 1개 + Discord 1개.",
+  "emptyTitle": "채널이 없습니다",
+  "emptyDesc": "Telegram 또는 Discord를 연결하여 메시징 앱에서 에이전트와 채팅하세요.",
+  "status": {
+    "running": "실행 중",
+    "stopped": "중지됨",
+    "disabled": "비활성화됨",
+    "degraded": "성능 저하",
+    "starting": "시작 중",
+    "registered": "구성됨",
+    "failed": "실패"
+  },
+  "channelTypes": {
+    "telegram": "Telegram",
+    "discord": "Discord"
+  },
+  "form": {
+    "createTitle": "채널 추가",
+    "displayName": "표시 이름",
+    "displayNamePlaceholder": "내 Telegram 봇",
+    "channelType": "채널 유형",
+    "selectType": "유형 선택",
+    "agent": "에이전트",
+    "selectAgent": "에이전트 선택",
+    "enabled": "활성화",
+    "credentials": "자격 증명",
+    "credentialsHint": "(현재 값을 유지하려면 비워 두세요)",
+    "configuration": "구성",
+    "cancel": "취소",
+    "save": "저장",
+    "create": "생성",
+    "saving": "저장 중...",
+    "errors": {
+      "agentRequired": "에이전트가 필요합니다",
+      "typeRequired": "채널 유형이 필요합니다",
+      "tokenRequired": "봇 토큰이 필요합니다"
+    }
+  },
+  "detail": {
+    "back": "뒤로",
+    "lastChecked": "마지막 확인: {{value}}",
+    "tabs": {
+      "general": "일반",
+      "credentials": "자격 증명",
+      "managers": "관리자",
+      "advanced": "고급"
+    },
+    "general": {
+      "identity": "정체성",
+      "name": "이름",
+      "nameHint": "읽기 전용 slug 식별자",
+      "channelType": "채널 유형",
+      "displayName": "표시 이름",
+      "displayNamePlaceholder": "표시 이름 입력",
+      "agent": "에이전트",
+      "selectAgent": "에이전트 선택",
+      "enabled": "활성화",
+      "saveChanges": "변경사항 저장",
+      "saving": "저장 중..."
+    },
+    "policies": "정책",
+    "credentials": {
+      "hint": "현재 값을 유지하려면 필드를 비워 두세요. 자격 증명은 저장 시 암호화됩니다.",
+      "updateCredentials": "자격 증명 업데이트",
+      "saving": "저장 중...",
+      "saved": "자격 증명이 업데이트되었습니다"
+    },
+    "managers": {
+      "description": "채널 그룹의 관리자로 사용자를 지정합니다. 관리자는 대화를 중재할 수 있습니다.",
+      "groups": "그룹",
+      "noManagerGroups": "관리자 그룹이 아직 없습니다",
+      "noManagerGroupsHint": "사용자가 그룹 채팅에서 봇과 상호작용하면 그룹이 여기에 나타납니다.",
+      "loadingManagers": "관리자 로딩 중...",
+      "noManagers": "이 그룹에 관리자가 없습니다",
+      "managersCount": "관리자 {{count}}명",
+      "managersCountPlural": "관리자 {{count}}명",
+      "columns": {
+        "userId": "사용자 ID",
+        "name": "이름",
+        "username": "사용자명"
+      },
+      "addForm": {
+        "title": "관리자 추가",
+        "hint": "관리자를 추가하려면 그룹과 사용자 정보를 입력하세요",
+        "groupId": "그룹 ID",
+        "groupIdPlaceholder": "예: group:telegram:-100123456",
+        "userId": "사용자 ID",
+        "userIdPlaceholder": "검색하거나 사용자 ID 입력",
+        "addManager": "관리자 추가",
+        "add": "추가",
+        "errors": {
+          "groupUserRequired": "그룹 ID와 사용자 ID가 필요합니다",
+          "failedAdd": "관리자 추가에 실패했습니다"
+        }
+      }
+    },
+    "advanced": "고급",
+    "advancedTitle": "고급 설정",
+    "network": "네트워크",
+    "networkDesc": "API 서버 및 프록시 구성",
+    "limits": "제한",
+    "limitsDesc": "메시지 및 미디어 제한",
+    "streaming": "스트리밍",
+    "streamingDesc": "점진적 응답 전달",
+    "behavior": "동작",
+    "behaviorDesc": "리액션, 미리보기, 답장 모드",
+    "accessControl": "접근 제어",
+    "accessControlDesc": "사용자 허용 목록 제한",
+    "saveConfig": "저장",
+    "noAdvanced": "이 채널 유형에 사용 가능한 고급 설정이 없습니다."
+  },
+  "pairing": {
+    "title": "페어링된 기기",
+    "pending": "대기 중인 요청 ({{count}})",
+    "paired": "페어링된 기기 ({{count}})",
+    "empty": "페어링된 기기가 없습니다",
+    "emptyDesc": "사용자가 봇에 메시지를 보내고 승인이 필요할 때 기기가 여기에 나타납니다.",
+    "sender": "발신자: ",
+    "chat": "채팅: ",
+    "code": "코드",
+    "approve": "승인",
+    "deny": "거부",
+    "revoke": "취소",
+    "confirmApprove": {
+      "title": "페어링 승인",
+      "description": "{{channel}}:{{senderId}} (코드: {{code}})을(를) 승인하시겠습니까? 이 기기가 에이전트와 상호작용할 수 있게 됩니다.",
+      "confirmLabel": "승인"
+    },
+    "confirmDeny": {
+      "title": "페어링 거부",
+      "description": "{{channel}}:{{senderId}} (코드: {{code}})을(를) 거부하시겠습니까? 요청이 제거됩니다.",
+      "confirmLabel": "거부"
+    },
+    "confirmRevoke": {
+      "title": "기기 취소",
+      "description": "{{channel}}:{{senderId}}을(를) 취소하시겠습니까? 기기가 다시 페어링해야 합니다.",
+      "confirmLabel": "취소"
+    }
+  },
+  "toast": {
+    "created": "채널이 생성되었습니다",
+    "updated": "채널이 업데이트되었습니다",
+    "deleted": "채널이 삭제되었습니다",
+    "failedCreate": "채널 생성에 실패했습니다",
+    "failedUpdate": "채널 업데이트에 실패했습니다",
+    "failedDelete": "채널 삭제에 실패했습니다"
+  },
+  "delete": {
+    "title": "채널 삭제",
+    "description": "{{name}}을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+    "confirmLabel": "삭제"
+  }
+}
