@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "jobs": [
+    {
+      "id": "job-001",
+      "name": "📅 Daily Briefing",
+      "agentId": "bbojjak",
+      "enabled": true,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 9 * * *",
+        "tz": "Asia/Seoul"
+      },
+      "payload": {
+        "kind": "message",
+        "message": "Good morning! Please provide a daily briefing.",
+        "lightContext": false
+      },
+      "delivery": {
+        "mode": "announce",
+        "channel": "slack",
+        "to": "C01234ABCDE"
+      },
+      "wakeMode": ""
+    },
+    {
+      "id": "job-002",
+      "name": "🔄 Health Check 상태확인",
+      "agentId": "bbojjak",
+      "enabled": true,
+      "schedule": {
+        "kind": "every",
+        "everyMs": 300000,
+        "tz": ""
+      },
+      "payload": {
+        "kind": "message",
+        "message": "Run health check.",
+        "lightContext": true
+      },
+      "delivery": {
+        "mode": "silent",
+        "channel": "last",
+        "to": ""
+      },
+      "wakeMode": "next-heartbeat"
+    },
+    {
+      "id": "job-003",
+      "name": "One Time Reminder",
+      "agentId": "friday",
+      "enabled": false,
+      "schedule": {
+        "kind": "at",
+        "atMs": 1755000000000,
+        "tz": "UTC"
+      },
+      "payload": {
+        "kind": "message",
+        "message": "This is your one-time reminder.",
+        "lightContext": false
+      },
+      "delivery": {
+        "mode": "silent",
+        "channel": "last",
+        "to": ""
+      },
+      "wakeMode": ""
+    }
+  ]
+}
