@@ -1,0 +1,57 @@
+{
+  "agents": {
+    "defaults": {
+      "model": { "primary": "anthropic/claude-opus-4-6" },
+      "compaction": { "mode": "safeguard" },
+      "maxConcurrent": 4,
+      "subagents": { "maxConcurrent": 8 },
+      "memorySearch": { "enabled": true }
+    },
+    "list": [
+      {
+        "id": "bbojjak",
+        "groupChat": { "mentionPatterns": ["뽀짝이", "bbojjak"] }
+      },
+      {
+        "id": "helper",
+        "groupChat": { "mentionPatterns": ["헬퍼"] }
+      }
+    ]
+  },
+  "channels": {
+    "slack": {
+      "enabled": true,
+      "botToken": "xoxb-default-token",
+      "appToken": "xapp-default-token",
+      "requireMention": true,
+      "groupPolicy": "open",
+      "dmPolicy": "allowlist",
+      "allowFrom": ["U09V6BG8V25"],
+      "accounts": {
+        "bbojjak": {
+          "botToken": "xoxb-bbojjak-token",
+          "appToken": "xapp-bbojjak-token"
+        }
+      }
+    },
+    "telegram": {
+      "token": "8539012345:AAFakeTokenForTesting",
+      "enabled": true
+    }
+  },
+  "mcp": {
+    "servers": {
+      "airtable": {
+        "command": "npx",
+        "args": ["-y", "airtable-mcp-server"],
+        "env": { "AIRTABLE_API_KEY": "pat_fake_key" }
+      },
+      "filesystem": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+        "env": {}
+      }
+    }
+  },
+  "gateway": { "port": 18789 }
+}
