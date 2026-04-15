@@ -40,6 +40,7 @@
     "apiKeys": "API 키",
     "apiDocs": "API 문서",
     "packages": "패키지",
-    "tenants": "테넌트"
+    "tenants": "테넌트",
+    "importOpenClaw": "OpenClaw에서 가져오기"
   }
 }

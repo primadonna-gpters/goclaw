@@ -41,6 +41,7 @@
     "apiDocs": "API 文档",
     "packages": "软件包",
     "tenants": "租户",
-    "backupRestore": "备份与恢复"
+    "backupRestore": "备份与恢复",
+    "importOpenClaw": "从 OpenClaw 导入"
   }
 }
