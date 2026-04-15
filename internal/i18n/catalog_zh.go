@@ -192,6 +192,13 @@ func init() {
 
 		MsgInvalidRole: "无效角色：允许的值为 owner、admin、operator、member、viewer",
 
+		// OpenClaw Migration
+		MsgOpenClawScanSuccess:    "OpenClaw scan complete: found %d agents",
+		MsgOpenClawImportSuccess:  "Migration complete: %s",
+		MsgOpenClawNoAgents:       "No agents found in OpenClaw configuration",
+		MsgOpenClawConfigNotFound: "openclaw.json not found at specified path",
+		MsgOpenClawSlackWarning:   "Slack channels can only connect to one gateway. Stop OpenClaw before enabling.",
+
 		MsgContactIDsRequired:  "contact_ids 为必填项",
 		MsgMergeTargetRequired: "必须提供 tenant_user_id 或 create_user 其中之一",
 		MsgTenantUserNotFound:  "未找到租户用户",

@@ -192,6 +192,13 @@ func init() {
 
 		MsgInvalidRole: "vai trò không hợp lệ: giá trị cho phép là owner, admin, operator, member, viewer",
 
+		// OpenClaw Migration
+		MsgOpenClawScanSuccess:    "OpenClaw scan complete: found %d agents",
+		MsgOpenClawImportSuccess:  "Migration complete: %s",
+		MsgOpenClawNoAgents:       "No agents found in OpenClaw configuration",
+		MsgOpenClawConfigNotFound: "openclaw.json not found at specified path",
+		MsgOpenClawSlackWarning:   "Slack channels can only connect to one gateway. Stop OpenClaw before enabling.",
+
 		MsgContactIDsRequired:  "contact_ids là bắt buộc",
 		MsgMergeTargetRequired: "cần chính xác một trong tenant_user_id hoặc create_user",
 		MsgTenantUserNotFound:  "không tìm thấy tenant user",

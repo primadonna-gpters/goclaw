@@ -1472,6 +1472,37 @@ Exposes GoClaw tools to Claude CLI via streamable HTTP at `/mcp/bridge`. Only li
 
 ---
 
+## 33. OpenClaw Migration
+
+### OpenClaw Migration
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/v1/import/openclaw/scan` | Scan OpenClaw directory and preview migration |
+| POST | `/v1/import/openclaw` | Execute migration for selected agents |
+
+**POST /v1/import/openclaw/scan**
+
+Scans an OpenClaw installation directory and returns a preview of what will be migrated.
+
+Request:
+- Body: `{"path": "~/.openclaw"}` (JSON)
+- Auth: System owner required
+
+Response: Agent list, channels, MCP servers, environment variables, warnings.
+
+**POST /v1/import/openclaw**
+
+Executes the migration for selected agents.
+
+Request:
+- Body: `{"path": "~/.openclaw", "selected_agents": ["bbojjak"], "include_credentials": true}` (JSON)
+- Auth: System owner required
+
+Response: Per-agent import results with summary counts.
+
+---
+
 ## Error Responses
 
 All endpoints return errors in a consistent JSON format:

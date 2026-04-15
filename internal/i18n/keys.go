@@ -212,6 +212,13 @@ const (
 	MsgSTTWhatsappPrivacyWarning = "warn.stt_whatsapp_privacy"         // "Enabling STT for WhatsApp breaks end-to-end encryption for voice messages sent to this agent."
 	MsgVoiceMessageFallback      = "channel.voice_message_fallback"    // "[Voice message]" — used when STT unavailable/disabled/timed-out
 
+	// --- OpenClaw Migration ---
+	MsgOpenClawScanSuccess    = "openclaw.scan_success"      // "OpenClaw scan complete: found %d agents"
+	MsgOpenClawImportSuccess  = "openclaw.import_success"    // "Migration complete: %s"
+	MsgOpenClawNoAgents       = "openclaw.no_agents"         // "No agents found in OpenClaw configuration"
+	MsgOpenClawConfigNotFound = "openclaw.config_not_found"  // "openclaw.json not found at specified path"
+	MsgOpenClawSlackWarning   = "openclaw.slack_warning"     // "Slack channels can only connect to one gateway. Stop OpenClaw before enabling."
+
 	// --- Contact merge ---
 	MsgContactIDsRequired  = "error.contact_ids_required"  // "contact_ids is required"
 	MsgMergeTargetRequired = "error.merge_target_required" // "exactly one of tenant_user_id or create_user is required"

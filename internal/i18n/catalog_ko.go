@@ -177,6 +177,13 @@ func init() {
 
 		MsgInvalidRole: "잘못된 역할: 허용 값은 owner, admin, operator, member, viewer입니다",
 
+		// OpenClaw Migration
+		MsgOpenClawScanSuccess:    "OpenClaw 스캔 완료: 에이전트 %d개 발견",
+		MsgOpenClawImportSuccess:  "이관 완료: %s",
+		MsgOpenClawNoAgents:       "OpenClaw 설정에서 에이전트를 찾을 수 없습니다",
+		MsgOpenClawConfigNotFound: "지정한 경로에서 openclaw.json을 찾을 수 없습니다",
+		MsgOpenClawSlackWarning:   "Slack 채널은 하나의 게이트웨이에만 연결됩니다. 이관 전 OpenClaw을 중지하세요.",
+
 		MsgContactIDsRequired:  "contact_ids는 필수입니다",
 		MsgMergeTargetRequired: "tenant_user_id 또는 create_user 중 정확히 하나가 필요합니다",
 		MsgTenantUserNotFound:  "테넌트 사용자를 찾을 수 없습니다",
