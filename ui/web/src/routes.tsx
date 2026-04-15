@@ -114,6 +114,9 @@ const TenantDetailPage = lazyWithRetry(() =>
 const BackupRestorePage = lazyWithRetry(() =>
   import("@/pages/backup-restore/backup-restore-page").then((m) => ({ default: m.BackupRestorePage })),
 );
+const ImportOpenClawPage = lazyWithRetry(() =>
+  import("@/pages/import-openclaw/import-openclaw-page").then((m) => ({ default: m.ImportOpenClawPage })),
+);
 const TenantSelectorPage = lazyWithRetry(() =>
   import("@/pages/login/tenant-selector").then((m) => ({ default: m.TenantSelectorPage })),
 );
@@ -162,6 +165,7 @@ export function AppRoutes() {
           <Route path={ROUTES.AGENTS} element={<AgentsPage key="list" />} />
           <Route path={ROUTES.IMPORT_EXPORT} element={<RequireAdmin><ImportExportPage /></RequireAdmin>} />
           <Route path={ROUTES.BACKUP_RESTORE} element={<RequireAdmin><BackupRestorePage /></RequireAdmin>} />
+          <Route path={ROUTES.IMPORT_OPENCLAW} element={<RequireAdmin><ImportOpenClawPage /></RequireAdmin>} />
           <Route path={ROUTES.AGENT_CODEX_POOL} element={<RequireAdmin><AgentCodexPoolPage /></RequireAdmin>} />
           <Route path={ROUTES.AGENT_DETAIL} element={<AgentsPage key="detail" />} />
           <Route path={ROUTES.TEAMS} element={<TeamsPage key="list" />} />

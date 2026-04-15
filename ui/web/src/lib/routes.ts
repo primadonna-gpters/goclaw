@@ -44,5 +44,6 @@ export const ROUTES = {
   TENANT_DETAIL: "/admin/tenants/:id",
   SETUP: "/setup",
   BACKUP_RESTORE: "/backup-restore",
+  IMPORT_OPENCLAW: "/import-openclaw",
   SELECT_TENANT: "/select-tenant",
 } as const;
