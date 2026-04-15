@@ -182,6 +182,13 @@ const (
 	// --- Tenants ---
 	MsgInvalidRole = "error.invalid_role" // "invalid role: allowed values are owner, admin, operator, member, viewer"
 
+	// --- OpenClaw Migration ---
+	MsgOpenClawScanSuccess    = "openclaw.scan_success"      // "OpenClaw scan complete: found %d agents"
+	MsgOpenClawImportSuccess  = "openclaw.import_success"    // "Migration complete: %s"
+	MsgOpenClawNoAgents       = "openclaw.no_agents"         // "No agents found in OpenClaw configuration"
+	MsgOpenClawConfigNotFound = "openclaw.config_not_found"  // "openclaw.json not found at specified path"
+	MsgOpenClawSlackWarning   = "openclaw.slack_warning"     // "Slack channels can only connect to one gateway. Stop OpenClaw before enabling."
+
 	// --- Contact merge ---
 	MsgContactIDsRequired  = "error.contact_ids_required"  // "contact_ids is required"
 	MsgMergeTargetRequired = "error.merge_target_required"  // "exactly one of tenant_user_id or create_user is required"

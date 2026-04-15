@@ -179,6 +179,13 @@ func init() {
 
 		MsgInvalidRole: "invalid role: allowed values are owner, admin, operator, member, viewer",
 
+		// OpenClaw Migration
+		MsgOpenClawScanSuccess:    "OpenClaw scan complete: found %d agents",
+		MsgOpenClawImportSuccess:  "Migration complete: %s",
+		MsgOpenClawNoAgents:       "No agents found in OpenClaw configuration",
+		MsgOpenClawConfigNotFound: "openclaw.json not found at specified path",
+		MsgOpenClawSlackWarning:   "Slack channels can only connect to one gateway. Stop OpenClaw before enabling.",
+
 		MsgContactIDsRequired:  "contact_ids is required",
 		MsgMergeTargetRequired: "exactly one of tenant_user_id or create_user is required",
 		MsgTenantUserNotFound:  "tenant user not found",
