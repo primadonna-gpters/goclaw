@@ -6,14 +6,30 @@ export interface ScanRequest {
   path: string;
 }
 
+export interface SkillPreview {
+  slug: string;
+  name: string;
+  description: string;
+  source: string; // "workspace" or "shared"
+}
+
 export interface AgentPreview {
   id: string;
   workspace_path: string;
   bootstrap_files: number;
+  bootstrap_file_names?: string[];
   memory_docs: number;
   skills: number;
+  skill_list?: SkillPreview[];
   cron_jobs: number;
+  cron_job_names?: string[];
   has_env: boolean;
+}
+
+export interface AgentSelectionPayload {
+  bootstrap_files: string[];
+  skills: string[];
+  cron_jobs: string[];
 }
 
 export interface ChannelPreview {
@@ -37,11 +53,20 @@ export interface EnvVarPreview {
   category: string;
 }
 
+export interface LargeDirInfo {
+  agent_id: string;
+  name: string;
+  path: string;
+  size_human: string;
+  size_bytes: number;
+}
+
 export interface ScanResult {
   agents: AgentPreview[];
   channels: ChannelPreview[];
   mcp_servers: MCPPreview[];
   env_vars: EnvVarPreview[];
+  large_dirs?: LargeDirInfo[];
   warnings: string[];
 }
 
@@ -49,6 +74,8 @@ export interface ImportRequest {
   path: string;
   selected_agents: string[];
   include_credentials: boolean;
+  workspace_mode: "symlink" | "copy";
+  agent_selections?: Record<string, AgentSelectionPayload>;
 }
 
 export interface ImportAgentResult {
@@ -74,7 +101,7 @@ export function useOpenClawImportApi() {
   }
 
   async function importOpenClaw(req: ImportRequest): Promise<ImportResult> {
-    return http.post<ImportResult>("/v1/import/openclaw/import", req);
+    return http.post<ImportResult>("/v1/import/openclaw", req);
   }
 
   return { scanOpenClaw, importOpenClaw };

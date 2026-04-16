@@ -2,14 +2,18 @@ package http
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/nextlevelbuilder/goclaw/internal/config"
+	"github.com/nextlevelbuilder/goclaw/internal/crypto"
 	"github.com/nextlevelbuilder/goclaw/internal/openclaw"
 	"github.com/nextlevelbuilder/goclaw/internal/store"
 	"github.com/nextlevelbuilder/goclaw/internal/store/pg"
@@ -25,21 +29,40 @@ type openClawScanRequest struct {
 }
 
 type openClawScanResponse struct {
-	Agents     []openClawAgentPreview `json:"agents"`
+	Agents     []openClawAgentPreview   `json:"agents"`
 	Channels   []openClawChannelPreview `json:"channels"`
-	MCPServers []openClawMCPPreview   `json:"mcp_servers"`
-	EnvVars    []openClawEnvPreview   `json:"env_vars"`
-	Warnings   []string               `json:"warnings"`
+	MCPServers []openClawMCPPreview     `json:"mcp_servers"`
+	EnvVars    []openClawEnvPreview     `json:"env_vars"`
+	LargeDirs  []openClawLargeDirInfo   `json:"large_dirs"`
+	Warnings   []string                 `json:"warnings"`
+}
+
+type openClawLargeDirInfo struct {
+	AgentID   string `json:"agent_id"`
+	Name      string `json:"name"`
+	Path      string `json:"path"`
+	SizeHuman string `json:"size_human"`
+	SizeBytes int64  `json:"size_bytes"`
 }
 
 type openClawAgentPreview struct {
-	ID             string `json:"id"`
-	WorkspacePath  string `json:"workspace_path"`
-	BootstrapFiles int    `json:"bootstrap_files"`
-	MemoryDocs     int    `json:"memory_docs"`
-	Skills         int    `json:"skills"`
-	CronJobs       int    `json:"cron_jobs"`
-	HasEnv         bool   `json:"has_env"`
+	ID                 string                   `json:"id"`
+	WorkspacePath      string                   `json:"workspace_path"`
+	BootstrapFiles     int                      `json:"bootstrap_files"`
+	BootstrapFileNames []string                 `json:"bootstrap_file_names"`
+	MemoryDocs         int                      `json:"memory_docs"`
+	Skills             int                      `json:"skills"`
+	SkillList          []openClawSkillPreview    `json:"skill_list"`
+	CronJobs           int                      `json:"cron_jobs"`
+	CronJobNames       []string                 `json:"cron_job_names"`
+	HasEnv             bool                     `json:"has_env"`
+}
+
+type openClawSkillPreview struct {
+	Slug        string `json:"slug"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Source      string `json:"source"` // "workspace" or "shared"
 }
 
 type openClawChannelPreview struct {
@@ -64,9 +87,17 @@ type openClawEnvPreview struct {
 }
 
 type openClawImportRequest struct {
-	Path               string   `json:"path"`
-	SelectedAgents     []string `json:"selected_agents"`
-	IncludeCredentials bool     `json:"include_credentials"`
+	Path               string                          `json:"path"`
+	SelectedAgents     []string                        `json:"selected_agents"`
+	IncludeCredentials bool                            `json:"include_credentials"`
+	WorkspaceMode      string                          `json:"workspace_mode"` // "symlink" (default) or "copy"
+	AgentSelections    map[string]openClawAgentSelection `json:"agent_selections,omitempty"`
+}
+
+type openClawAgentSelection struct {
+	BootstrapFiles []string `json:"bootstrap_files,omitempty"` // nil = all
+	Skills         []string `json:"skills,omitempty"`          // nil = all, list of slugs
+	CronJobs       []string `json:"cron_jobs,omitempty"`       // nil = all, list of slugified names
 }
 
 type openClawImportResponse struct {
@@ -118,6 +149,13 @@ func (h *AgentsHandler) handleOpenClawScan(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// 1b. Merge Claude CLI standard .mcp.json (optional)
+	if mcpData, err := os.ReadFile(filepath.Join(ocPath, ".mcp.json")); err == nil {
+		if mErr := openclaw.MergeMCPJSON(cfg, mcpData); mErr != nil {
+			slog.Warn("openclaw.scan: .mcp.json parse failed", "error", mErr)
+		}
+	}
+
 	// 2. Read cron/jobs.json (optional)
 	cronData, _ := os.ReadFile(filepath.Join(ocPath, "cron", "jobs.json"))
 
@@ -145,11 +183,70 @@ func (h *AgentsHandler) handleOpenClawScan(w http.ResponseWriter, r *http.Reques
 			continue
 		}
 
+		// Track workspace-local skill count before scanning shared dirs
+		wsSkillCount := len(ws.Skills)
+
+		// Scan shared skill directories from openclaw.json skills.load.extraDirs
+		for _, extraDir := range cfg.SkillExtraDirs {
+			expandedDir := config.ExpandHome(extraDir)
+			if _, err := os.Stat(expandedDir); err == nil {
+				_ = openclaw.ScanSkillsDir(expandedDir, ws)
+			}
+		}
+
+		// Auto-detect shared skill directories under ocPath (1-depth).
+		// Skips the agent's own workspace (already scanned).
+		if entries, err := os.ReadDir(ocPath); err == nil {
+			for _, e := range entries {
+				if !e.IsDir() {
+					continue
+				}
+				dirPath := filepath.Join(ocPath, e.Name())
+				if dirPath == wsPath {
+					continue
+				}
+				// Skip other known workspace patterns to avoid double-counting
+				if strings.HasPrefix(e.Name(), "workspace-") || e.Name() == "workspace" || e.Name() == "agents" {
+					continue
+				}
+				candidate := filepath.Join(dirPath, "skills")
+				if _, err := os.Stat(candidate); err == nil {
+					_ = openclaw.ScanSkillsDir(candidate, ws)
+				}
+			}
+		}
+
 		preview.BootstrapFiles = len(ws.BootstrapFiles)
+		for _, bf := range ws.BootstrapFiles {
+			preview.BootstrapFileNames = append(preview.BootstrapFileNames, bf.Name)
+		}
 		preview.MemoryDocs = len(ws.MemoryDocs)
 		preview.Skills = len(ws.Skills)
+		for i, sk := range ws.Skills {
+			source := "shared"
+			if i < wsSkillCount {
+				source = "workspace"
+			}
+			preview.SkillList = append(preview.SkillList, openClawSkillPreview{
+				Slug:        sk.Slug,
+				Name:        sk.Name,
+				Description: sk.Description,
+				Source:      source,
+			})
+		}
 		preview.HasEnv = len(ws.EnvVars) > 0
-		resp.Warnings = append(resp.Warnings, ws.Warnings...)
+		for _, w := range ws.Warnings {
+			resp.Warnings = append(resp.Warnings, fmt.Sprintf("[%s] %s", agent.ID, w))
+		}
+		for _, ld := range ws.LargeDirs {
+			resp.LargeDirs = append(resp.LargeDirs, openClawLargeDirInfo{
+				AgentID:   agent.ID,
+				Name:      ld.Name,
+				Path:      ld.Path,
+				SizeHuman: ld.SizeHuman,
+				SizeBytes: ld.SizeBytes,
+			})
+		}
 
 		// Count cron jobs for this agent
 		if len(cronData) > 0 {
@@ -158,6 +255,9 @@ func (h *AgentsHandler) handleOpenClawScan(w http.ResponseWriter, r *http.Reques
 				slog.Warn("openclaw.scan: cron parse failed", "agent_id", agent.ID, "error", err)
 			} else {
 				preview.CronJobs = len(crons)
+				for _, c := range crons {
+					preview.CronJobNames = append(preview.CronJobNames, c.Name)
+				}
 			}
 		}
 
@@ -215,7 +315,7 @@ func (h *AgentsHandler) handleOpenClawScan(w http.ResponseWriter, r *http.Reques
 
 	// MCP servers
 	for _, mcp := range cfg.MCPServers {
-		var envKeys []string
+		envKeys := make([]string, 0, len(mcp.Env)) // empty slice, never nil
 		for k := range mcp.Env {
 			envKeys = append(envKeys, k)
 		}
@@ -275,6 +375,13 @@ func (h *AgentsHandler) handleOpenClawImport(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// Merge Claude CLI standard .mcp.json (optional)
+	if mcpData, err := os.ReadFile(filepath.Join(ocPath, ".mcp.json")); err == nil {
+		if mErr := openclaw.MergeMCPJSON(cfg, mcpData); mErr != nil {
+			slog.Warn("openclaw.import: .mcp.json parse failed", "error", mErr)
+		}
+	}
+
 	// Read cron/jobs.json (optional)
 	cronData, _ := os.ReadFile(filepath.Join(ocPath, "cron", "jobs.json"))
 
@@ -283,6 +390,14 @@ func (h *AgentsHandler) handleOpenClawImport(w http.ResponseWriter, r *http.Requ
 	for _, a := range req.SelectedAgents {
 		selectedSet[a] = true
 	}
+
+	// Pick a default provider name from existing GoClaw providers.
+	// Prefers claude_cli type, then falls back to any enabled provider.
+	var defaultProvider string
+	_ = h.db.QueryRowContext(ctx,
+		`SELECT name FROM llm_providers WHERE enabled = true
+		 ORDER BY CASE WHEN provider_type = 'claude_cli' THEN 1 ELSE 2 END,
+		          created_at LIMIT 1`).Scan(&defaultProvider)
 
 	var results []openClawImportResult
 
@@ -306,6 +421,37 @@ func (h *AgentsHandler) handleOpenClawImport(w http.ResponseWriter, r *http.Requ
 			continue
 		}
 
+		// Scan shared skill dirs (extraDirs + auto-detect 1-depth under ocPath)
+		for _, extraDir := range cfg.SkillExtraDirs {
+			expandedDir := config.ExpandHome(extraDir)
+			if _, err := os.Stat(expandedDir); err == nil {
+				_ = openclaw.ScanSkillsDir(expandedDir, ws)
+			}
+		}
+		if entries, err := os.ReadDir(ocPath); err == nil {
+			for _, e := range entries {
+				if !e.IsDir() {
+					continue
+				}
+				dirPath := filepath.Join(ocPath, e.Name())
+				if dirPath == wsPath {
+					continue
+				}
+				if strings.HasPrefix(e.Name(), "workspace-") || e.Name() == "workspace" || e.Name() == "agents" {
+					continue
+				}
+				candidate := filepath.Join(dirPath, "skills")
+				if _, err := os.Stat(candidate); err == nil {
+					_ = openclaw.ScanSkillsDir(candidate, ws)
+				}
+			}
+		}
+
+		// Apply per-agent selections if provided
+		if sel, ok := req.AgentSelections[agent.ID]; ok {
+			ws = applyAgentSelection(ws, sel)
+		}
+
 		// b. Parse cron jobs for this agent
 		var cronJobs []pg.CronJobExport
 		if len(cronData) > 0 {
@@ -313,11 +459,16 @@ func (h *AgentsHandler) handleOpenClawImport(w http.ResponseWriter, r *http.Requ
 			if err != nil {
 				slog.Warn("openclaw.import: cron parse failed", "agent_id", agent.ID, "error", err)
 			}
+			// Filter cron jobs by selection
+			if sel, ok := req.AgentSelections[agent.ID]; ok && sel.CronJobs != nil {
+				cronJobs = filterCronJobs(cronJobs, sel.CronJobs)
+			}
 		}
 
 		// c. Build import archive
-		displayName := agent.ID // use agent ID as display name; can be updated later
-		arc := openclaw.BuildImportArchive(agent.ID, displayName, ws, cronJobs, &cfg.Defaults)
+		displayName := agent.ID
+		// Default model alias (Claude CLI compatible); provider is a known GoClaw provider.
+		arc := openclaw.BuildImportArchive(agent.ID, displayName, ws, cronJobs, &cfg.Defaults, "opus", defaultProvider)
 
 		// d. Convert to internal importArchive format
 		ia := convertOpenClawArchive(arc)
@@ -343,13 +494,17 @@ func (h *AgentsHandler) handleOpenClawImport(w http.ResponseWriter, r *http.Requ
 			}
 		}
 
-		// g. Create channels for this agent
+		// g. Create channels for this agent using the resolved slack account + telegram.
 		if agentID != "" {
+			wantSlackAccount := resolveSlackAccount(agent, cfg.Channels)
 			for _, ch := range cfg.Channels {
-				// Default channels (no agent ID) go to all agents; per-agent channels match
-				if ch.AgentID != "" && ch.AgentID != agent.ID {
-					continue
+				if ch.Type == "slack" {
+					// Only import the slack account that belongs to this agent.
+					if wantSlackAccount == "" || ch.AccountName != wantSlackAccount {
+						continue
+					}
 				}
+				// telegram and legacy channels fall through.
 				chName := h.createOpenClawChannel(ctx, agentID, ch, agent.ID)
 				if chName != "" {
 					result.ChannelsCreated = append(result.ChannelsCreated, chName)
@@ -367,6 +522,34 @@ func (h *AgentsHandler) handleOpenClawImport(w http.ResponseWriter, r *http.Requ
 			}
 		}
 
+		// i. Handle large directories (symlink or copy)
+		if agentID != "" && len(ws.LargeDirs) > 0 {
+			agentWS := config.ExpandHome(fmt.Sprintf("%s/%s", h.defaultWorkspace, agent.ID))
+			mode := req.WorkspaceMode
+			if mode == "" {
+				mode = "symlink"
+			}
+			for _, ld := range ws.LargeDirs {
+				target := filepath.Join(agentWS, ld.Name)
+				if _, err := os.Lstat(target); err == nil {
+					continue // already exists
+				}
+				if mode == "symlink" {
+					if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+						slog.Warn("openclaw.import: mkdir for symlink failed", "path", target, "error", err)
+						continue
+					}
+					if err := os.Symlink(ld.Path, target); err != nil {
+						slog.Warn("openclaw.import: symlink failed", "src", ld.Path, "dst", target, "error", err)
+					} else {
+						slog.Info("openclaw.import: symlinked large dir", "src", ld.Path, "dst", target)
+					}
+				}
+				// "copy" mode: skip for now — too large for synchronous HTTP.
+				// Users should copy manually or use rsync for multi-GB directories.
+			}
+		}
+
 		results = append(results, result)
 	}
 
@@ -376,6 +559,80 @@ func (h *AgentsHandler) handleOpenClawImport(w http.ResponseWriter, r *http.Requ
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+// resolveSlackAccount picks the slack account name bound to the given agent.
+// Resolution order:
+//  1. agent.channels.slack.account is explicitly set in openclaw.json
+//  2. an account whose key matches the agent ID (bbojjak → "bbojjak")
+//  3. agent.default == true → "default" account (if present)
+//  4. otherwise empty (no slack channel is imported)
+func resolveSlackAccount(agent openclaw.AgentEntry, channels []openclaw.ChannelConfig) string {
+	accountSet := make(map[string]bool, len(channels))
+	for _, ch := range channels {
+		if ch.Type == "slack" && ch.AccountName != "" {
+			accountSet[ch.AccountName] = true
+		}
+	}
+	if agent.SlackAccount != "" && accountSet[agent.SlackAccount] {
+		return agent.SlackAccount
+	}
+	if accountSet[agent.ID] {
+		return agent.ID
+	}
+	if agent.IsDefault && accountSet["default"] {
+		return "default"
+	}
+	return ""
+}
+
+// applyAgentSelection filters workspace scan results based on user selections.
+// nil slices mean "include all".
+func applyAgentSelection(ws *openclaw.WorkspaceScanResult, sel openClawAgentSelection) *openclaw.WorkspaceScanResult {
+	filtered := *ws // shallow copy
+
+	if sel.BootstrapFiles != nil {
+		allowed := make(map[string]bool, len(sel.BootstrapFiles))
+		for _, name := range sel.BootstrapFiles {
+			allowed[name] = true
+		}
+		filtered.BootstrapFiles = nil
+		for _, bf := range ws.BootstrapFiles {
+			if allowed[bf.Name] {
+				filtered.BootstrapFiles = append(filtered.BootstrapFiles, bf)
+			}
+		}
+	}
+
+	if sel.Skills != nil {
+		allowed := make(map[string]bool, len(sel.Skills))
+		for _, slug := range sel.Skills {
+			allowed[slug] = true
+		}
+		filtered.Skills = nil
+		for _, sk := range ws.Skills {
+			if allowed[sk.Slug] {
+				filtered.Skills = append(filtered.Skills, sk)
+			}
+		}
+	}
+
+	return &filtered
+}
+
+// filterCronJobs returns only cron jobs whose name is in the allowed list.
+func filterCronJobs(jobs []pg.CronJobExport, allowed []string) []pg.CronJobExport {
+	set := make(map[string]bool, len(allowed))
+	for _, name := range allowed {
+		set[name] = true
+	}
+	var filtered []pg.CronJobExport
+	for _, j := range jobs {
+		if set[j.Name] {
+			filtered = append(filtered, j)
+		}
+	}
+	return filtered
+}
 
 // convertOpenClawArchive converts an openclaw.ImportArchiveData into the internal
 // importArchive format consumed by doImportNewAgent.
@@ -425,29 +682,58 @@ func resolveOpenClawWorkspace(ocPath, agentID string) string {
 }
 
 // importOpenClawSkill inserts a skill and grants it to the agent.
+// The skill's source SKILL.md lives on disk at skill.FilePath; GoClaw reads it
+// lazily via file_path. Content is sha256-hashed for change detection.
 func (h *AgentsHandler) importOpenClawSkill(ctx context.Context, agentID string, skill openclaw.SkillEntry) {
 	tid := importTenantID(ctx)
 
-	_, err := h.db.ExecContext(ctx,
-		`INSERT INTO skills (slug, name, description, content, tenant_id)
-		 VALUES ($1, $2, $3, $4, $5)
-		 ON CONFLICT (slug, tenant_id) DO UPDATE SET
+	fileSize := int64(len(skill.Content))
+	hash := sha256.Sum256([]byte(skill.Content))
+	fileHash := hex.EncodeToString(hash[:])
+
+	// Minimal frontmatter from parsed name/description
+	fmObj := map[string]string{}
+	if skill.Name != "" {
+		fmObj["name"] = skill.Name
+	}
+	if skill.Description != "" {
+		fmObj["description"] = skill.Description
+	}
+	fmJSON, _ := json.Marshal(fmObj)
+
+	displayName := skill.Name
+	if displayName == "" {
+		displayName = skill.Slug
+	}
+
+	var skillID string
+	err := h.db.QueryRowContext(ctx,
+		`INSERT INTO skills (name, slug, description, owner_id, visibility, version, status,
+			frontmatter, file_path, file_size, file_hash, is_system, deps, enabled, tenant_id)
+		 VALUES ($1, $2, $3, 'admin', 'private', 1, 'active',
+			$4::jsonb, $5, $6, $7, false, '{}'::jsonb, true, $8)
+		 ON CONFLICT (tenant_id, slug) DO UPDATE SET
 			name = EXCLUDED.name,
 			description = EXCLUDED.description,
-			content = EXCLUDED.content,
-			updated_at = NOW()`,
-		skill.Slug, skill.Name, skill.Description, skill.Content, tid,
-	)
+			frontmatter = EXCLUDED.frontmatter,
+			file_path = EXCLUDED.file_path,
+			file_size = EXCLUDED.file_size,
+			file_hash = EXCLUDED.file_hash,
+			updated_at = NOW()
+		 RETURNING id`,
+		displayName, skill.Slug, skill.Description, fmJSON,
+		skill.FilePath, fileSize, fileHash, tid,
+	).Scan(&skillID)
 	if err != nil {
 		slog.Warn("openclaw.import.skill", "slug", skill.Slug, "error", err)
 		return
 	}
 
 	_, err = h.db.ExecContext(ctx,
-		`INSERT INTO skill_agent_grants (skill_slug, agent_id, tenant_id)
-		 VALUES ($1, $2::uuid, $3)
-		 ON CONFLICT DO NOTHING`,
-		skill.Slug, agentID, tid,
+		`INSERT INTO skill_agent_grants (skill_id, agent_id, pinned_version, granted_by, tenant_id)
+		 VALUES ($1::uuid, $2::uuid, 1, 'openclaw-import', $3)
+		 ON CONFLICT (skill_id, agent_id) DO NOTHING`,
+		skillID, agentID, tid,
 	)
 	if err != nil {
 		slog.Warn("openclaw.import.skill_grant", "slug", skill.Slug, "agent_id", agentID, "error", err)
@@ -489,22 +775,54 @@ func (h *AgentsHandler) createOpenClawChannel(ctx context.Context, agentID strin
 		return ""
 	}
 
+	// Slack defaults follow OpenClaw conventions:
+	//  - require_mention: true   (force-on to break bot-to-bot loops; OpenClaw
+	//                              relies on per-channel mention rules that
+	//                              GoClaw does not model 1:1)
+	//  - allow_bots: true        (OpenClaw enables this for delegation between
+	//                              agents — combined with require_mention=true
+	//                              the loop only triggers on explicit @mention)
+	requireMention := ch.RequireMention
+	allowBots := true
+	if ch.Type == "slack" {
+		requireMention = true
+	}
+
 	channelConfig, _ := json.Marshal(map[string]any{
-		"require_mention": ch.RequireMention,
+		"require_mention": requireMention,
+		"allow_bots":      allowBots,
 		"group_policy":    ch.GroupPolicy,
 		"dm_policy":       ch.DMPolicy,
 		"allow_from":      ch.AllowFrom,
 	})
 
-	// Channels created as disabled for safety (Slack socket mode conflict)
+	// Encrypt credentials the same way PGChannelInstanceStore.Create does.
+	// Channel readers call crypto.Decrypt at runtime — plain bytes would fail.
+	var credsBytes []byte
+	encKey := os.Getenv("GOCLAW_ENCRYPTION_KEY")
+	if len(credentials) > 0 && encKey != "" {
+		enc, encErr := crypto.Encrypt(string(credentials), encKey)
+		if encErr != nil {
+			slog.Warn("openclaw.import.channel: encrypt failed", "name", channelName, "error", encErr)
+			return ""
+		}
+		credsBytes = []byte(enc)
+	} else {
+		credsBytes = credentials
+	}
+
+	// Channels created as disabled for safety (Slack socket mode conflict).
+	// Unique index is (tenant_id, name).
 	_, err := h.db.ExecContext(ctx,
-		`INSERT INTO channel_instances (agent_id, channel_type, name, enabled, credentials, config, tenant_id)
-		 VALUES ($1::uuid, $2, $3, false, $4, $5, $6)
-		 ON CONFLICT (agent_id, name, tenant_id) DO UPDATE SET
+		`INSERT INTO channel_instances (name, display_name, channel_type, agent_id, credentials, config, enabled, created_by, tenant_id)
+		 VALUES ($1, $2, $3, $4::uuid, $5, $6, false, 'openclaw-import', $7)
+		 ON CONFLICT (tenant_id, name) DO UPDATE SET
+			agent_id = EXCLUDED.agent_id,
+			channel_type = EXCLUDED.channel_type,
 			credentials = EXCLUDED.credentials,
 			config = EXCLUDED.config,
 			updated_at = NOW()`,
-		agentID, ch.Type, channelName, credentials, channelConfig, tid,
+		channelName, channelName, ch.Type, agentID, credsBytes, channelConfig, tid,
 	)
 	if err != nil {
 		slog.Warn("openclaw.import.channel", "name", channelName, "agent_id", agentID, "error", err)
@@ -526,27 +844,34 @@ func (h *AgentsHandler) createOpenClawMCP(ctx context.Context, agentID string, m
 	argsJSON, _ := json.Marshal(mcp.Args)
 	envJSON, _ := json.Marshal(env)
 
-	_, err := h.db.ExecContext(ctx,
-		`INSERT INTO mcp_servers (name, command, args, env, transport, tenant_id)
-		 VALUES ($1, $2, $3, $4, $5, $6)
-		 ON CONFLICT (name, tenant_id) DO UPDATE SET
+	transport := mcp.Transport
+	if transport == "" {
+		transport = "stdio"
+	}
+
+	var serverID string
+	err := h.db.QueryRowContext(ctx,
+		`INSERT INTO mcp_servers (name, display_name, transport, command, args, env, enabled, created_by, tenant_id)
+		 VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, true, 'openclaw-import', $7)
+		 ON CONFLICT (tenant_id, name) DO UPDATE SET
 			command = EXCLUDED.command,
 			args = EXCLUDED.args,
 			env = EXCLUDED.env,
 			transport = EXCLUDED.transport,
-			updated_at = NOW()`,
-		mcp.Name, mcp.Command, argsJSON, envJSON, mcp.Transport, tid,
-	)
+			updated_at = NOW()
+		 RETURNING id`,
+		mcp.Name, mcp.Name, transport, mcp.Command, argsJSON, envJSON, tid,
+	).Scan(&serverID)
 	if err != nil {
 		slog.Warn("openclaw.import.mcp_server", "name", mcp.Name, "error", err)
 		return ""
 	}
 
 	_, err = h.db.ExecContext(ctx,
-		`INSERT INTO mcp_agent_grants (mcp_server_name, agent_id, tenant_id)
-		 VALUES ($1, $2::uuid, $3)
-		 ON CONFLICT DO NOTHING`,
-		mcp.Name, agentID, tid,
+		`INSERT INTO mcp_agent_grants (server_id, agent_id, enabled, granted_by, tenant_id)
+		 VALUES ($1::uuid, $2::uuid, true, 'openclaw-import', $3)
+		 ON CONFLICT (server_id, agent_id) DO NOTHING`,
+		serverID, agentID, tid,
 	)
 	if err != nil {
 		slog.Warn("openclaw.import.mcp_grant", "name", mcp.Name, "agent_id", agentID, "error", err)
