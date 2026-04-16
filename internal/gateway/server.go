@@ -198,29 +198,14 @@ func (s *Server) BuildMux() *http.ServeMux {
 		}
 	}
 
-	// Embedded web UI (built with -tags embedui). Catch-all after all API routes.
-	// Pixel office routes are registered on a separate sub-mux to avoid
-	// the webui catch-all "/" intercepting /pixel-office/ paths.
-	webHandler := webui.Handler()
+	// Pixel office: register directly on main mux (before webui catch-all).
 	if s.pixelOffice != nil {
-		pixelMux := http.NewServeMux()
-		s.pixelOffice.RegisterRoutes(pixelMux)
-		if webHandler != nil {
-			mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-				// Try pixel office routes first.
-				if strings.HasPrefix(r.URL.Path, "/pixel-office/") || strings.HasPrefix(r.URL.Path, "/ws/pixel-office") {
-					pixelMux.ServeHTTP(w, r)
-					return
-				}
-				// Fall back to webui SPA.
-				webHandler.ServeHTTP(w, r)
-			})
-			slog.Info("serving embedded web UI + pixel office")
-		} else {
-			s.pixelOffice.RegisterRoutes(mux)
-		}
-	} else if webHandler != nil {
-		mux.Handle("/", webHandler)
+		s.pixelOffice.RegisterRoutes(mux)
+	}
+
+	// Embedded web UI (built with -tags embedui). Catch-all after all API routes.
+	if h := webui.Handler(); h != nil {
+		mux.Handle("/", h)
 		slog.Info("serving embedded web UI")
 	}
 

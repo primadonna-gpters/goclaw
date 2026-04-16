@@ -36,6 +36,12 @@ func NewHandler(collector *Collector, uiFS fs.FS) *Handler {
 // RegisterRoutes adds pixel-office routes to the given mux.
 // Implements the gateway routeRegistrar interface.
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
+	// Debug endpoint to verify routing works.
+	mux.HandleFunc("/pixel-office-ping", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte("pong"))
+	})
+
 	mux.HandleFunc("GET /v1/pixel-office/agents", h.handleSnapshot)
 	mux.HandleFunc("/ws/pixel-office", h.handleWS)
 
