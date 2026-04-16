@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/nextlevelbuilder/goclaw/internal/bus"
@@ -92,6 +93,10 @@ var nonRetryableAuthErrors = regexp.MustCompile(
 
 func isNonRetryableAuthError(errMsg string) bool {
 	return nonRetryableAuthErrors.MatchString(errMsg)
+}
+
+func normalizeIncomingText(text string) string {
+	return strings.ToValidUTF8(text, "")
 }
 
 // HealthProbe performs an auth.test call to verify the Slack connection is alive.

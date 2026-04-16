@@ -37,7 +37,7 @@ func (c *Channel) handleAppMention(ev *slackevents.AppMentionEvent) {
 
 	senderID := ev.User
 	channelID := ev.Channel
-	content := ev.Text
+	content := normalizeIncomingText(ev.Text)
 
 	displayName := c.resolveDisplayName(senderID)
 

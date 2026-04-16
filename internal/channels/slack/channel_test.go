@@ -2,6 +2,7 @@ package slack
 
 import (
 	"testing"
+	"unicode/utf8"
 )
 
 func TestSplitAtLimit(t *testing.T) {
@@ -106,6 +107,19 @@ func TestSplitAtLimit(t *testing.T) {
 					tt.content, tt.maxLen, chunk, rem, tt.expectedChunk, tt.expectedRem)
 			}
 		})
+	}
+}
+
+func TestNormalizeIncomingText(t *testing.T) {
+	raw := "prefix " + string([]byte{0xeb, '.', '.'}) + " suffix"
+
+	got := normalizeIncomingText(raw)
+
+	if !utf8.ValidString(got) {
+		t.Fatalf("normalizeIncomingText returned invalid UTF-8: %q", got)
+	}
+	if got != "prefix .. suffix" {
+		t.Fatalf("normalizeIncomingText(%q) = %q, want %q", raw, got, "prefix .. suffix")
 	}
 }
 

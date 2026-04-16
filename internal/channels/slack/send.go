@@ -18,7 +18,7 @@ func (c *Channel) Send(_ context.Context, msg bus.OutboundMessage) error {
 		return fmt.Errorf("slack bot not running")
 	}
 
-	channelID := msg.ChatID
+	channelID := extractChannelID(msg.ChatID)
 	if channelID == "" {
 		return fmt.Errorf("empty chat ID for slack send")
 	}
@@ -26,8 +26,13 @@ func (c *Channel) Send(_ context.Context, msg bus.OutboundMessage) error {
 	placeholderKey := channelID
 	if pk := msg.Metadata["placeholder_key"]; pk != "" {
 		placeholderKey = pk
+	} else if msg.ChatID != "" {
+		placeholderKey = msg.ChatID
 	}
 	threadTS := msg.Metadata["message_thread_id"]
+	if threadTS == "" {
+		threadTS = extractThreadTS(msg.ChatID)
+	}
 
 	// Placeholder update (LLM retry notification)
 	if msg.Metadata["placeholder_update"] == "true" {

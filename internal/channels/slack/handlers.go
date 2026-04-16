@@ -92,7 +92,7 @@ func (c *Channel) handleMessage(ev *slackevents.MessageEvent) {
 
 	senderID := ev.User
 	channelID := ev.Channel
-	content := ev.Text
+	content := normalizeIncomingText(ev.Text)
 
 	isDM := ev.ChannelType == "im"
 	peerKind := "group"
