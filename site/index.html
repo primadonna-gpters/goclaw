@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenClaw to GoClaw Migration Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0b0f;--bg-elevated:#12131a;--bg-card:#161821;--bg-code:#1a1c27;
+  --border:#1e2030;--border-hover:#2a2d42;
+  --text:#c8cad8;--text-dim:#6b6f85;--text-muted:#4a4d5e;
+  --heading:#e8eaf0;
+  --accent:#00d4aa;--accent-dim:#00d4aa22;--accent-glow:#00d4aa15;
+  --orange:#f59e0b;--orange-dim:#f59e0b22;
+  --red:#ef4444;--red-dim:#ef444422;
+  --blue:#3b82f6;--blue-dim:#3b82f622;
+  --purple:#a78bfa;--purple-dim:#a78bfa22;
+  --cyan:#22d3ee;
+  --font-display:'Outfit',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:var(--font-display);font-weight:400;
+  line-height:1.7;-webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+
+/* Noise texture overlay */
+body::before{
+  content:'';position:fixed;inset:0;z-index:9999;pointer-events:none;
+  opacity:.03;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border-hover);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+
+/* === HERO === */
+.hero{
+  min-height:80vh;display:flex;flex-direction:column;justify-content:center;
+  padding:4rem 2rem;position:relative;overflow:hidden;
+}
+.hero::before{
+  content:'';position:absolute;top:-20%;right:-10%;
+  width:700px;height:700px;border-radius:50%;
+  background:radial-gradient(circle,var(--accent-glow) 0%,transparent 70%);
+  filter:blur(80px);pointer-events:none;
+}
+.hero::after{
+  content:'';position:absolute;bottom:-30%;left:-15%;
+  width:500px;height:500px;border-radius:50%;
+  background:radial-gradient(circle,var(--blue-dim) 0%,transparent 70%);
+  filter:blur(100px);pointer-events:none;
+}
+.hero-inner{max-width:900px;margin:0 auto;position:relative;z-index:1}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 16px;border-radius:100px;
+  background:var(--accent-dim);border:1px solid var(--accent);
+  color:var(--accent);font-size:.75rem;font-weight:600;
+  letter-spacing:.08em;text-transform:uppercase;
+  margin-bottom:2rem;
+}
+.hero-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.hero h1{
+  font-size:clamp(2.5rem,6vw,4.5rem);font-weight:800;
+  line-height:1.05;color:var(--heading);
+  letter-spacing:-.03em;margin-bottom:1.5rem;
+}
+.hero h1 .gradient{
+  background:linear-gradient(135deg,var(--accent),var(--cyan));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.hero p.subtitle{
+  font-size:1.15rem;color:var(--text-dim);max-width:600px;
+  line-height:1.6;margin-bottom:2.5rem;
+}
+.hero-stats{display:flex;gap:2rem;flex-wrap:wrap}
+.hero-stat{text-align:left}
+.hero-stat .num{
+  font-size:2rem;font-weight:700;color:var(--heading);
+  font-family:var(--mono);letter-spacing:-.02em;
+}
+.hero-stat .label{font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.1em;margin-top:2px}
+
+/* === NAV === */
+nav{
+  position:sticky;top:0;z-index:100;
+  background:var(--bg);border-bottom:1px solid var(--border);
+  backdrop-filter:blur(20px);background:rgba(10,11,15,.85);
+}
+nav .nav-inner{
+  max-width:1100px;margin:0 auto;padding:0 2rem;
+  display:flex;align-items:center;gap:1rem;
+  overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+}
+nav .nav-inner::-webkit-scrollbar{display:none}
+nav a{
+  display:block;padding:1rem 0;margin-right:1.5rem;
+  font-size:.8rem;font-weight:500;color:var(--text-dim);
+  text-decoration:none;white-space:nowrap;
+  border-bottom:2px solid transparent;transition:all .2s;
+}
+nav a:hover,nav a.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* === CONTENT === */
+.content{max-width:1100px;margin:0 auto;padding:3rem 2rem 6rem}
+
+/* Section */
+section{margin-bottom:5rem;scroll-margin-top:4rem}
+section h2{
+  font-size:1.8rem;font-weight:700;color:var(--heading);
+  letter-spacing:-.02em;margin-bottom:.5rem;
+  display:flex;align-items:center;gap:.75rem;
+}
+section h2 .step-num{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:36px;height:36px;border-radius:10px;
+  background:var(--accent-dim);border:1px solid var(--accent);
+  color:var(--accent);font-size:.85rem;font-weight:700;
+  font-family:var(--font-mono);flex-shrink:0;
+}
+section h2 .step-num.orange{background:var(--orange-dim);border-color:var(--orange);color:var(--orange)}
+section h2 .step-num.blue{background:var(--blue-dim);border-color:var(--blue);color:var(--blue)}
+section h2 .step-num.purple{background:var(--purple-dim);border-color:var(--purple);color:var(--purple)}
+section h2 .step-num.red{background:var(--red-dim);border-color:var(--red);color:var(--red)}
+section .section-desc{color:var(--text-dim);margin-bottom:2rem;font-size:.95rem}
+section h3{font-size:1.15rem;font-weight:600;color:var(--heading);margin:2rem 0 .75rem}
+
+/* Cards */
+.card{
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:12px;padding:1.5rem;margin-bottom:1rem;
+  transition:border-color .2s;
+}
+.card:hover{border-color:var(--border-hover)}
+.card-label{
+  font-size:.7rem;font-weight:600;text-transform:uppercase;
+  letter-spacing:.1em;color:var(--accent);margin-bottom:.75rem;
+}
+
+/* Code blocks */
+pre{
+  background:var(--bg-code);border:1px solid var(--border);
+  border-radius:10px;padding:1.25rem 1.5rem;
+  overflow-x:auto;margin:1rem 0;font-size:.82rem;
+  font-family:var(--font-mono);line-height:1.6;color:#b4b8cc;
+}
+pre .comment{color:#5a5f7a}
+pre .string{color:#a3d9a5}
+pre .keyword{color:#c792ea}
+pre .flag{color:var(--orange)}
+
+code:not(pre code){
+  background:var(--bg-code);border:1px solid var(--border);
+  padding:2px 7px;border-radius:5px;font-size:.82em;
+  font-family:var(--font-mono);color:var(--cyan);
+}
+
+/* Tables */
+.table-wrap{overflow-x:auto;margin:1rem 0;border-radius:12px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+thead{background:var(--bg-elevated)}
+th{
+  padding:.75rem 1rem;text-align:left;font-weight:600;
+  color:var(--text-dim);font-size:.7rem;text-transform:uppercase;
+  letter-spacing:.08em;border-bottom:1px solid var(--border);
+}
+td{padding:.75rem 1rem;border-bottom:1px solid var(--border);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover{background:var(--bg-elevated)}
+td .tag{
+  display:inline-block;padding:2px 8px;border-radius:4px;
+  font-size:.7rem;font-weight:600;
+}
+td .tag.yes{background:var(--accent-dim);color:var(--accent)}
+td .tag.no{background:var(--red-dim);color:var(--red)}
+td .tag.partial{background:var(--orange-dim);color:var(--orange)}
+td .tag.exclusive{background:var(--purple-dim);color:var(--purple)}
+
+/* Callouts */
+.callout{
+  padding:1rem 1.25rem;border-radius:10px;margin:1rem 0;
+  display:flex;gap:.75rem;align-items:flex-start;font-size:.88rem;
+}
+.callout.warn{background:var(--orange-dim);border:1px solid rgba(245,158,11,.2)}
+.callout.warn .icon{color:var(--orange)}
+.callout.danger{background:var(--red-dim);border:1px solid rgba(239,68,68,.2)}
+.callout.danger .icon{color:var(--red)}
+.callout.info{background:var(--blue-dim);border:1px solid rgba(59,130,246,.2)}
+.callout.info .icon{color:var(--blue)}
+.callout .icon{font-size:1.1rem;flex-shrink:0;margin-top:2px}
+
+/* Timeline */
+.timeline{position:relative;padding-left:2rem}
+.timeline::before{
+  content:'';position:absolute;left:7px;top:0;bottom:0;
+  width:2px;background:var(--border);
+}
+.timeline-item{position:relative;margin-bottom:2rem}
+.timeline-item::before{
+  content:'';position:absolute;left:-2rem;top:6px;
+  width:16px;height:16px;border-radius:50%;
+  background:var(--bg);border:2px solid var(--accent);
+}
+.timeline-item.done::before{background:var(--accent)}
+.timeline-item h4{font-size:.95rem;font-weight:600;color:var(--heading);margin-bottom:.25rem}
+.timeline-item p{font-size:.85rem;color:var(--text-dim)}
+.timeline-item .time{font-size:.75rem;color:var(--text-muted);font-family:var(--font-mono)}
+
+/* Architecture diagram */
+.arch-diagram{
+  background:var(--bg-code);border:1px solid var(--border);
+  border-radius:12px;padding:2rem;margin:1.5rem 0;
+  font-family:var(--font-mono);font-size:.8rem;line-height:1.8;
+  color:var(--text-dim);overflow-x:auto;white-space:pre;
+}
+.arch-diagram .highlight{color:var(--accent);font-weight:600}
+.arch-diagram .dim{color:var(--text-muted)}
+.arch-diagram .orange{color:var(--orange)}
+.arch-diagram .blue{color:var(--blue)}
+.arch-diagram .purple{color:var(--purple)}
+
+/* Provider cards grid */
+.provider-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;margin:1.5rem 0}
+.provider-card{
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:12px;padding:1.25rem;transition:all .2s;
+}
+.provider-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.provider-card .provider-name{font-weight:600;color:var(--heading);margin-bottom:.25rem}
+.provider-card .provider-type{font-size:.75rem;color:var(--accent);font-family:var(--font-mono);margin-bottom:.5rem}
+.provider-card .provider-desc{font-size:.82rem;color:var(--text-dim)}
+.provider-card .provider-tag{
+  display:inline-block;margin-top:.5rem;padding:2px 8px;
+  border-radius:4px;font-size:.7rem;font-weight:600;
+}
+.provider-card .provider-tag.free{background:var(--accent-dim);color:var(--accent)}
+.provider-card .provider-tag.paid{background:var(--orange-dim);color:var(--orange)}
+
+/* Feature comparison */
+.feature-row{
+  display:flex;gap:1rem;margin-bottom:.5rem;
+  padding:.75rem 1rem;border-radius:8px;
+  background:var(--bg-elevated);
+}
+.feature-row .feature-name{flex:1;font-size:.85rem;color:var(--text)}
+.feature-row .feature-oc,.feature-row .feature-gc{
+  width:120px;text-align:center;font-size:.82rem;font-weight:500;
+}
+
+/* Footer */
+footer{
+  border-top:1px solid var(--border);padding:3rem 2rem;
+  text-align:center;color:var(--text-muted);font-size:.8rem;
+}
+
+/* Animations */
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.animate{animation:fadeUp .6s ease-out both}
+.delay-1{animation-delay:.1s}.delay-2{animation-delay:.2s}.delay-3{animation-delay:.3s}
+
+/* Responsive */
+@media(max-width:768px){
+  .hero{min-height:auto;padding:3rem 1.5rem}
+  .hero h1{font-size:2rem}
+  .hero-stats{gap:1.5rem}
+  .content{padding:2rem 1.5rem 4rem}
+  .provider-grid{grid-template-columns:1fr}
+  section h2{font-size:1.4rem}
+  .feature-row{flex-direction:column;gap:.5rem}
+  .feature-row .feature-oc,.feature-row .feature-gc{width:auto;text-align:left}
+}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-inner">
+    <div class="hero-badge animate"><span>Migration Guide</span></div>
+    <h1 class="animate delay-1">OpenClaw에서<br><span class="gradient">GoClaw</span>으로</h1>
+    <p class="subtitle animate delay-2">TypeScript/Node.js 기반 OpenClaw에서 Go 기반 GoClaw으로의 완전한 전환 가이드. 병렬 실행으로 다운타임 없이 30분 만에 이전합니다.</p>
+    <div class="hero-stats animate delay-3">
+      <div class="hero-stat"><div class="num">~30min</div><div class="label">총 소요 시간</div></div>
+      <div class="hero-stat"><div class="num">0</div><div class="label">다운타임</div></div>
+      <div class="hero-stat"><div class="num">35MB</div><div class="label">RAM (1GB+ 대비)</div></div>
+      <div class="hero-stat"><div class="num">&lt;1s</div><div class="label">시작 시간</div></div>
+    </div>
+  </div>
+</header>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a href="#overview">개요</a>
+    <a href="#step1">1. 준비</a>
+    <a href="#step2">2. 기동</a>
+    <a href="#step3">3. 프로바이더</a>
+    <a href="#step4">4. 에이전트</a>
+    <a href="#step5">5. 워크스페이스</a>
+    <a href="#step6">6. 채널</a>
+    <a href="#step7">7. 검증</a>
+    <a href="#comparison">비교</a>
+    <a href="#troubleshooting">트러블슈팅</a>
+  </div>
+</nav>
+
+<!-- CONTENT -->
+<main class="content">
+
+<!-- Overview -->
+<section id="overview">
+  <h2>전체 흐름</h2>
+  <p class="section-desc">7단계로 구성된 마이그레이션 파이프라인. OpenClaw과 병렬로 GoClaw를 띄운 후, 설정을 이전하고, 검증 후 스위치오버합니다.</p>
+  <div class="timeline">
+    <div class="timeline-item"><h4>1. 클론 & 환경 준비</h4><p>GoClaw 레포 클론, .env 시크릿 생성</p><span class="time">~2분</span></div>
+    <div class="timeline-item"><h4>2. GoClaw 기동</h4><p>Docker Compose로 PostgreSQL + GoClaw 시작</p><span class="time">~5분</span></div>
+    <div class="timeline-item"><h4>3. LLM 프로바이더 설정</h4><p>Claude CLI / Proxy / API Key 중 선택</p><span class="time">~5분</span></div>
+    <div class="timeline-item"><h4>4. 에이전트 생성</h4><p>default 에이전트 + 추가 에이전트 생성</p><span class="time">~2분</span></div>
+    <div class="timeline-item"><h4>5. 워크스페이스 이전</h4><p>SOUL.md, MEMORY.md 등 컨텍스트 파일을 DB에 시드</p><span class="time">~5분</span></div>
+    <div class="timeline-item"><h4>6. 채널 이전</h4><p>Slack/Telegram 토큰 추출 → GoClaw API로 등록</p><span class="time">~5분</span></div>
+    <div class="timeline-item"><h4>7. OpenClaw 중지 & 검증</h4><p>스위치오버, 헬스체크, 채팅 테스트</p><span class="time">~2분</span></div>
+  </div>
+</section>
+
+<!-- Step 1 -->
+<section id="step1">
+  <h2><span class="step-num">1</span> 클론 & 환경 준비</h2>
+  <p class="section-desc">GoClaw 레포를 클론하고 시크릿을 자동 생성합니다.</p>
+  <pre><span class="keyword">git clone</span> -b main https://github.com/nextlevelbuilder/goclaw.git
+<span class="keyword">cd</span> goclaw
+
+<span class="comment"># 시크릿 자동 생성 (게이트웨이 토큰 + 암호화 키)</span>
+<span class="keyword">chmod</span> +x prepare-env.sh && ./prepare-env.sh</pre>
+
+  <h3><code>.env</code> 편집</h3>
+  <pre><span class="comment"># PostgreSQL 비밀번호</span>
+POSTGRES_PASSWORD=<span class="string">your_secure_password</span>
+
+<span class="comment"># OpenClaw(18789/18790)과 포트 충돌 방지</span>
+GOCLAW_PORT=<span class="string">18800</span>
+POSTGRES_PORT=<span class="string">5433</span>
+
+<span class="comment"># 대시보드 전체 접근 권한을 위해 owner 설정</span>
+GOCLAW_OWNER_IDS=<span class="string">admin,system</span></pre>
+
+  <div class="callout warn">
+    <span class="icon">&#9888;</span>
+    <span><code>GOCLAW_OWNER_IDS</code>를 빠뜨리면 대시보드에서 에이전트 수정 시 퍼미션 에러가 발생합니다.</span>
+  </div>
+</section>
+
+<!-- Step 2 -->
+<section id="step2">
+  <h2><span class="step-num">2</span> GoClaw 기동</h2>
+  <p class="section-desc">두 가지 방법 중 선택합니다. Max 구독으로 Claude CLI를 쓰려면 소스 빌드가 필요합니다.</p>
+
+  <div class="card">
+    <div class="card-label">방법 A — 사전 빌드 이미지 (가장 빠름)</div>
+    <pre><span class="keyword">docker compose</span> -f docker-compose.yml -f docker-compose.postgres.yml <span class="flag">up -d</span></pre>
+  </div>
+
+  <div class="card">
+    <div class="card-label">방법 B — 소스 빌드 (Claude CLI 포함)</div>
+    <pre><span class="comment"># Claude CLI 포함 (Max 구독 사용자용)</span>
+<span class="keyword">make up</span> WITH_CLAUDE_CLI=1</pre>
+  </div>
+
+  <h3>정상 동작 확인</h3>
+  <pre><span class="keyword">curl</span> http://localhost:18800/health
+<span class="comment"># {"status":"ok","protocol":3}</span></pre>
+
+  <h3>DB 마이그레이션</h3>
+  <pre><span class="keyword">docker compose</span> -f docker-compose.yml -f docker-compose.postgres.yml \
+  -f docker-compose.upgrade.yml <span class="flag">run --rm upgrade</span></pre>
+</section>
+
+<!-- Step 3 -->
+<section id="step3">
+  <h2><span class="step-num orange">3</span> LLM 프로바이더 설정</h2>
+  <p class="section-desc">GoClaw은 6종의 프로바이더를 지원합니다. Claude Max 구독 사용자는 A 또는 B를 선택하세요.</p>
+
+  <div class="provider-grid">
+    <div class="provider-card">
+      <div class="provider-name">Claude CLI</div>
+      <div class="provider-type">claude_cli</div>
+      <div class="provider-desc">소스 빌드 필요. CLI를 subprocess로 실행하여 Max 구독 OAuth 토큰을 사용합니다.</div>
+      <span class="provider-tag free">구독만</span>
+    </div>
+    <div class="provider-card">
+      <div class="provider-name">claude-max-api-proxy</div>
+      <div class="provider-type">openai_compat</div>
+      <div class="provider-desc">별도 Node.js 컨테이너로 프록시 운영. 빌드 불필요. sed로 0.0.0.0 바인딩 패치 필요.</div>
+      <span class="provider-tag free">구독만</span>
+    </div>
+    <div class="provider-card">
+      <div class="provider-name">Anthropic Native</div>
+      <div class="provider-type">anthropic_native</div>
+      <div class="provider-desc">직접 HTTP+SSE 호출. 프롬프트 캐싱, Extended Thinking 지원.</div>
+      <span class="provider-tag paid">종량제</span>
+    </div>
+    <div class="provider-card">
+      <div class="provider-name">OpenAI-Compatible</div>
+      <div class="provider-type">openai_compat</div>
+      <div class="provider-desc">OpenRouter, Groq, DeepSeek, Mistral 등 호환 엔드포인트.</div>
+      <span class="provider-tag paid">종량제</span>
+    </div>
+    <div class="provider-card">
+      <div class="provider-name">ACP</div>
+      <div class="provider-type">acp</div>
+      <div class="provider-desc">Agent Client Protocol. subprocess + MCP 브릿지 방식.</div>
+      <span class="provider-tag free">구독만</span>
+    </div>
+    <div class="provider-card">
+      <div class="provider-name">DashScope</div>
+      <div class="provider-type">dashscope</div>
+      <div class="provider-desc">Alibaba Qwen. Extended thinking budget 지원.</div>
+      <span class="provider-tag paid">종량제</span>
+    </div>
+  </div>
+
+  <div class="callout info">
+    <span class="icon">&#8505;</span>
+    <span>Claude CLI 모델명은 별칭을 사용합니다: <code>opus</code>, <code>sonnet</code>, <code>haiku</code> (<code>claude-opus-4</code>가 아님)</span>
+  </div>
+
+  <h3>Claude CLI 프로바이더 등록 예시</h3>
+  <pre><span class="keyword">curl</span> -s -X POST \
+  -H <span class="string">"Authorization: Bearer $GATEWAY_TOKEN"</span> \
+  -H <span class="string">"X-GoClaw-User-Id: admin"</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  http://localhost:18800/v1/providers \
+  -d <span class="string">'{
+    "name": "claude-cli",
+    "provider_type": "claude_cli",
+    "api_key": "",
+    "enabled": true,
+    "settings": { "default_model": "opus" }
+  }'</span></pre>
+</section>
+
+<!-- Step 4 -->
+<section id="step4">
+  <h2><span class="step-num blue">4</span> 에이전트 생성</h2>
+  <p class="section-desc">GoClaw 채팅 API가 동작하려면 <code>agent_key: "default"</code> 에이전트가 필수입니다.</p>
+  <pre><span class="keyword">curl</span> -s -X POST \
+  -H <span class="string">"Authorization: Bearer $GATEWAY_TOKEN"</span> \
+  -H <span class="string">"X-GoClaw-User-Id: admin"</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  http://localhost:18800/v1/agents \
+  -d <span class="string">'{
+    "agent_key": "default",
+    "display_name": "Default Agent",
+    "agent_type": "open",
+    "provider": "&lt;PROVIDER_ID&gt;",
+    "model": "opus",
+    "is_default": true,
+    "enabled": true
+  }'</span></pre>
+</section>
+
+<!-- Step 5 -->
+<section id="step5">
+  <h2><span class="step-num purple">5</span> 워크스페이스 파일 이전</h2>
+  <p class="section-desc">GoClaw <code>open</code> 에이전트는 부트스트랩 파일을 <strong>DB</strong>에 저장합니다. 디스크가 아닙니다.</p>
+
+  <div class="callout danger">
+    <span class="icon">&#9888;</span>
+    <span>OpenClaw 워크스페이스 파일을 디스크에 복사해도 에이전트가 읽지 않습니다. 반드시 WebSocket RPC 또는 PostgreSQL을 통해 DB에 넣어야 합니다.</span>
+  </div>
+
+  <h3>GoClaw 부트스트랩 파일 (13개)</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>파일</th><th>용도</th><th>이전 방법</th></tr></thead>
+      <tbody>
+        <tr><td><code>SOUL.md</code></td><td>페르소나, 톤, 경계</td><td><span class="tag yes">agents.files.set</span></td></tr>
+        <tr><td><code>AGENTS.md</code></td><td>매 세션 운영 지침</td><td><span class="tag yes">agents.files.set</span></td></tr>
+        <tr><td><code>IDENTITY.md</code></td><td>에이전트 이름, 이모지</td><td><span class="tag yes">agents.files.set</span></td></tr>
+        <tr><td><code>USER.md</code></td><td>사용자 프로필</td><td><span class="tag yes">agents.files.set</span></td></tr>
+        <tr><td><code>HEARTBEAT.md</code></td><td>주기적 체크인</td><td><span class="tag yes">agents.files.set</span></td></tr>
+        <tr><td><code>BOOTSTRAP.md</code></td><td>첫 실행 의식</td><td><span class="tag yes">agents.files.set</span></td></tr>
+        <tr><td><code>MEMORY.md</code></td><td>장기 메모리</td><td><span class="tag partial">DB 직접 삽입</span></td></tr>
+        <tr><td><code>TOOLS.md</code></td><td>로컬 도구 노트</td><td><span class="tag yes">agents.files.set</span></td></tr>
+        <tr><td><code>DELEGATION.md</code></td><td>위임 규칙 (GoClaw 전용)</td><td><span class="tag exclusive">신규 작성</span></td></tr>
+        <tr><td><code>TEAM.md</code></td><td>팀 컨텍스트 (GoClaw 전용)</td><td><span class="tag exclusive">자동 생성</span></td></tr>
+        <tr><td><code>AVAILABILITY.md</code></td><td>가용성 (GoClaw 전용)</td><td><span class="tag exclusive">신규 작성</span></td></tr>
+        <tr><td><code>MEMORY.json</code></td><td>구조화 메모리</td><td><span class="tag partial">DB 직접 삽입</span></td></tr>
+        <tr><td><code>memory.md</code></td><td>MEMORY.md 대체</td><td><span class="tag partial">DB 직접 삽입</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Step 6 -->
+<section id="step6">
+  <h2><span class="step-num">6</span> 채널 이전</h2>
+  <p class="section-desc">GoClaw 채널은 HTTP API(<code>POST /v1/channels/instances</code>)를 통해 DB에 저장됩니다.</p>
+
+  <div class="callout warn">
+    <span class="icon">&#9888;</span>
+    <span>Slack 봇은 하나의 게이트웨이에만 연결 가능합니다. OpenClaw을 먼저 중지하세요.</span>
+  </div>
+
+  <h3>지원 채널</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>채널</th><th>GoClaw 타입</th><th>상태</th></tr></thead>
+      <tbody>
+        <tr><td>Telegram</td><td><code>telegram</code></td><td><span class="tag yes">프로덕션 검증</span></td></tr>
+        <tr><td>Slack</td><td><code>slack</code></td><td><span class="tag partial">구현됨 (미검증)</span></td></tr>
+        <tr><td>Discord</td><td><code>discord</code></td><td><span class="tag partial">구현됨 (미검증)</span></td></tr>
+        <tr><td>WhatsApp</td><td><code>whatsapp</code></td><td><span class="tag partial">구현됨 (미검증)</span></td></tr>
+        <tr><td>Feishu/Lark</td><td><code>feishu</code></td><td><span class="tag partial">구현됨 (미검증)</span></td></tr>
+        <tr><td>Zalo</td><td><code>zalo_oa</code></td><td><span class="tag partial">구현됨 (미검증)</span></td></tr>
+        <tr><td>Line, KakaoTalk 등</td><td>—</td><td><span class="tag no">미지원</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Step 7 -->
+<section id="step7">
+  <h2><span class="step-num red">7</span> OpenClaw 중지 & 검증</h2>
+  <pre><span class="comment"># OpenClaw 중지</span>
+<span class="keyword">cd</span> ~/openclaw-docker && <span class="keyword">docker compose down</span>
+
+<span class="comment"># GoClaw 상태 확인</span>
+<span class="keyword">curl</span> http://localhost:18800/health
+
+<span class="comment"># 채팅 테스트</span>
+<span class="keyword">curl</span> -s -X POST \
+  -H <span class="string">"Authorization: Bearer $GATEWAY_TOKEN"</span> \
+  -H <span class="string">"X-GoClaw-User-Id: admin"</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  http://localhost:18800/v1/chat/completions \
+  -d <span class="string">'{"model":"opus","messages":[{"role":"user","content":"Hello!"}]}'</span></pre>
+</section>
+
+<!-- Comparison -->
+<section id="comparison">
+  <h2>아키텍처 비교</h2>
+
+  <div class="arch-diagram"><span class="dim">OpenClaw (이전):</span>
+  Node.js <span class="dim">→</span> 파일 기반 상태 <span class="dim">→</span> ACP/subagents <span class="dim">→</span> Claude CLI
+  <span class="dim">├→</span> 멀티 에이전트 (agents.list)
+  <span class="dim">├→</span> 멀티유저 (session.dmScope)
+  <span class="dim">└→</span> 봇 간 위임 (subagents, sessions_spawn)
+
+<span class="highlight">GoClaw (이후):</span>
+  Go 바이너리 <span class="dim">→</span> <span class="blue">PostgreSQL</span> <span class="dim">→</span> 멀티테넌트 <span class="dim">→</span> Claude CLI 프로바이더
+  <span class="dim">├→</span> <span class="highlight">Web Dashboard</span> (React 19)
+  <span class="dim">├→</span> <span class="orange">에이전트 팀 & 위임</span> (칸반 보드 + 메일박스)
+  <span class="dim">├→</span> <span class="blue">per-user 세션 격리</span> (PostgreSQL)
+  <span class="dim">├→</span> <span class="purple">Model Steering</span> (Track/Guard/Hint)
+  <span class="dim">├→</span> <span class="purple">Knowledge Graph</span> + Extended Thinking
+  <span class="dim">└→</span> <span class="highlight">Desktop Edition</span> (GoClaw Lite)</div>
+
+  <h3>공통 기능</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>기능</th><th>OpenClaw</th><th>GoClaw</th></tr></thead>
+      <tbody>
+        <tr><td>멀티 에이전트</td><td><span class="tag yes">가능</span></td><td><span class="tag yes">가능</span></td></tr>
+        <tr><td>봇별 Slack 앱</td><td><span class="tag yes">가능</span></td><td><span class="tag yes">가능</span></td></tr>
+        <tr><td>봇별 워크스페이스</td><td><span class="tag yes">가능</span></td><td><span class="tag yes">가능</span></td></tr>
+        <tr><td>봇 간 위임</td><td><span class="tag yes">가능</span></td><td><span class="tag yes">가능</span></td></tr>
+        <tr><td>멀티유저 격리</td><td><span class="tag yes">가능</span></td><td><span class="tag yes">가능</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>GoClaw 전용 기능</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>기능</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>네이티브 Claude CLI 프로바이더</td><td><code>claude</code> 바이너리를 직접 subprocess 호출하여 메인 LLM으로 사용. OpenClaw은 과거 존재했으나 제거됨 — 현재 ACP 또는 외부 프록시 경유만 가능</td></tr>
+        <tr><td>팀 칸반 보드</td><td>에이전트 간 태스크 보드 + 메일박스 (프로젝트 관리형)</td></tr>
+        <tr><td>Model Steering</td><td>Track + Guard + Hint 3-layer 에이전트 행동 제어</td></tr>
+        <tr><td>Extended Thinking</td><td>Anthropic budget tokens, OpenAI reasoning effort</td></tr>
+        <tr><td>Knowledge Graph</td><td>LLM 엔티티 추출, 그래프 탐색, 시각화</td></tr>
+        <tr><td>Agent Evolution</td><td>predefined 에이전트의 SOUL.md 자기 진화</td></tr>
+        <tr><td>Custom Tools</td><td>런타임에 셸 기반 도구 동적 생성</td></tr>
+        <tr><td>Desktop Edition</td><td>SQLite 기반 네이티브 앱, Docker 불필요</td></tr>
+        <tr><td>RBAC + API Key</td><td>admin/operator/viewer + SHA-256 해시 키</td></tr>
+        <tr><td>Web Dashboard</td><td>에이전트/채널/세션/트레이스/팀/스킬/MCP 관리</td></tr>
+        <tr><td>5-Layer 보안</td><td>InputGuard, Shell Deny, Credential Scrubbing 등</td></tr>
+        <tr><td>LLM Tracing</td><td>내장 call tracing + spans + OTel export</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>인프라 비교</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>항목</th><th>OpenClaw</th><th>GoClaw</th></tr></thead>
+      <tbody>
+        <tr><td>RAM</td><td>&gt;1GB</td><td>~35MB</td></tr>
+        <tr><td>시작 시간</td><td>&gt;5초</td><td>&lt;1초</td></tr>
+        <tr><td>저장소</td><td>파일 기반</td><td>PostgreSQL + AES-256-GCM</td></tr>
+        <tr><td>프로바이더</td><td>10+</td><td>6종 (Native + Compat)</td></tr>
+        <tr><td>채널</td><td>37+</td><td>7</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Troubleshooting -->
+<section id="troubleshooting">
+  <h2>트러블슈팅</h2>
+
+  <div class="card">
+    <div class="card-label">agent not found: default</div>
+    <p><code>agent_key: "default"</code> 에이전트를 생성하세요. GoClaw HTTP 채팅 API에 필수입니다.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-label">대시보드 "Failed to update agent"</div>
+    <p><code>.env</code>에 <code>GOCLAW_OWNER_IDS=admin,system</code>을 설정하고 재시작. owner 역할이 필요합니다.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Claude CLI "unsupported model"</div>
+    <p>모델 별칭 사용: <code>opus</code>, <code>sonnet</code>, <code>haiku</code> (<code>claude-opus-4</code>가 아님).</p>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Claude CLI 401 인증 에러</div>
+    <p>OAuth 토큰(<code>sk-ant-oat01-...</code>)은 CLI를 통해서만 작동. API 키로 직접 사용 불가.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Slack 봇이 연결 안 됨</div>
+    <p>OpenClaw 중지 확인. Bot 토큰 <code>xoxb-</code>, App 토큰 <code>xapp-</code> 확인.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-label">부트스트랩 파일이 로드 안 됨</div>
+    <p>GoClaw open 에이전트는 DB에서 읽음. <code>agents.files.set</code> RPC 또는 <code>agent_context_files</code> 테이블 직접 삽입.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-label">macOS tar "Permission denied"</div>
+    <p><code>COPYFILE_DISABLE=1</code>로 확장 속성 건너뛰기. <code>--privileged</code> Alpine 컨테이너 사용.</p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p>OpenClaw to GoClaw Migration Guide &mdash; Built with care for the Claw ecosystem</p>
+</footer>
+
+<script>
+// Sticky nav active state
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('nav a');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      navLinks.forEach(l => l.classList.remove('active'));
+      const link = document.querySelector(`nav a[href="#${entry.target.id}"]`);
+      if (link) link.classList.add('active');
+    }
+  });
+}, { rootMargin: '-80px 0px -60% 0px', threshold: 0 });
+sections.forEach(s => observer.observe(s));
+
+// Scroll-triggered animations
+const animObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.style.opacity = '1'; e.target.style.transform = 'translateY(0)'; }});
+}, { threshold: 0.1 });
+document.querySelectorAll('.card, .provider-card, .timeline-item').forEach(el => {
+  el.style.opacity = '0'; el.style.transform = 'translateY(15px)';
+  el.style.transition = 'opacity .5s ease, transform .5s ease';
+  animObserver.observe(el);
+});
+</script>
+</body>
+</html>
