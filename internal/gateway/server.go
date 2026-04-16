@@ -147,6 +147,11 @@ func (s *Server) BuildMux() *http.ServeMux {
 	// HTTP API endpoints
 	mux.HandleFunc("/health", s.handleHealth)
 
+	// DEBUG: test if basic handler registration works
+	mux.HandleFunc("/debug-test-12345", func(w http.ResponseWriter, _ *http.Request) {
+		w.Write([]byte("debug-ok"))
+	})
+
 	// OpenAI-compatible chat completions
 	isManaged := s.agentStore != nil
 	chatHandler := httpapi.NewChatCompletionsHandler(s.agents, s.sessions, isManaged)
