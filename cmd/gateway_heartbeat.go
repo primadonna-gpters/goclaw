@@ -13,6 +13,7 @@ import (
 	"github.com/nextlevelbuilder/goclaw/internal/gateway"
 	"github.com/nextlevelbuilder/goclaw/internal/gateway/methods"
 	"github.com/nextlevelbuilder/goclaw/internal/heartbeat"
+	"github.com/nextlevelbuilder/goclaw/internal/pixeloffice"
 	"github.com/nextlevelbuilder/goclaw/internal/providers"
 	"github.com/nextlevelbuilder/goclaw/internal/scheduler"
 	"github.com/nextlevelbuilder/goclaw/internal/store"
@@ -40,9 +41,10 @@ func startCronAndHeartbeat(
 	cfg *config.Config,
 	heartbeatTool *tools.HeartbeatTool,
 	heartbeatMethods *methods.HeartbeatMethods,
+	pixelCollector *pixeloffice.Collector,
 ) *heartbeat.Ticker {
 	// Start cron service with job handler (routes through scheduler's cron lane)
-	pgStores.Cron.SetOnJob(makeCronJobHandler(sched, msgBus, cfg, channelMgr, pgStores.Sessions, pgStores.Agents))
+	pgStores.Cron.SetOnJob(makeCronJobHandler(sched, msgBus, cfg, channelMgr, pgStores.Sessions, pgStores.Agents, pixelCollector))
 	pgStores.Cron.SetOnEvent(func(event store.CronEvent) {
 		server.BroadcastEvent(*protocol.NewEvent(protocol.EventCron, event))
 	})
