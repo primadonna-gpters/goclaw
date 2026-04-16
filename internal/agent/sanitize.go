@@ -394,6 +394,16 @@ func IsSilentReply(text string) bool {
 	if trimmed == "" {
 		return false
 	}
+	// LLMs sometimes wrap NO_REPLY in an HTML comment trying to add hidden
+	// context (e.g. "<!-- NO_REPLY: 뽀야 멘션 -->"). Slack/Telegram render
+	// HTML comments verbatim, so we detect and unwrap single-comment bodies
+	// before the decorative-wrapper strip below picks up remaining noise.
+	if strings.HasPrefix(trimmed, "<!--") && strings.HasSuffix(trimmed, "-->") {
+		inner := strings.TrimSpace(trimmed[4 : len(trimmed)-3])
+		if inner != "" && !strings.Contains(inner, "<!--") {
+			trimmed = inner
+		}
+	}
 	// Strip decorative wrappers from both ends (quotes, markdown emphasis, punctuation).
 	stripped := strings.Trim(trimmed, "_ \t\n\r.,:;!?\"'`*~#>-()[]{}")
 	const token = "NO_REPLY"
