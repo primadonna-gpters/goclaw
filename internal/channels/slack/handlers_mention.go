@@ -119,6 +119,34 @@ func (c *Channel) stripBotMention(text string) string {
 	return strings.ReplaceAll(text, "<@"+c.botUserID+">", "")
 }
 
+// containsOtherUserMention returns true if the text contains any <@U...>
+// mention that is NOT the given selfUserID. Used to suppress thread
+// participation auto-reply when the user is explicitly addressing someone else
+// (a human or another bot) in a multi-agent channel.
+func containsOtherUserMention(text, selfUserID string) bool {
+	i := 0
+	for {
+		idx := strings.Index(text[i:], "<@")
+		if idx < 0 {
+			return false
+		}
+		start := i + idx + 2
+		end := strings.Index(text[start:], ">")
+		if end < 0 {
+			return false
+		}
+		// mention payload may include "|display"; take the id portion only
+		id := text[start : start+end]
+		if pipe := strings.Index(id, "|"); pipe >= 0 {
+			id = id[:pipe]
+		}
+		if id != selfUserID && id != "" {
+			return true
+		}
+		i = start + end + 1
+	}
+}
+
 // --- Policy checks ---
 
 func (c *Channel) checkDMPolicy(ctx context.Context, senderID, channelID string) bool {
