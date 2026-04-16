@@ -70,6 +70,20 @@ func (c *Channel) handleMessage(ev *slackevents.MessageEvent) {
 		return
 	}
 
+	// Bot-authored messages (granular permissions): ev.SubType is empty but
+	// ev.BotID is set. We accept these so multi-agent delegation works (one
+	// bot mentioning another bot in the workspace), but force strict mention
+	// gating to break bot-to-bot infinite loops:
+	//   1) drop messages from this bot itself (own bot_id),
+	//   2) skip thread-participation auto-reply for foreign bot messages so a
+	//      single mention can't keep both bots responding forever.
+	isBotMessage := ev.BotID != ""
+	if isBotMessage {
+		if ev.User == c.botUserID {
+			return
+		}
+	}
+
 	// Explicit dedup: prevent duplicate processing on Socket Mode reconnect
 	dedupKey := ev.Channel + ":" + ev.TimeStamp
 	if _, loaded := c.dedup.LoadOrStore(dedupKey, time.Now()); loaded {
@@ -168,12 +182,20 @@ func (c *Channel) handleMessage(ev *slackevents.MessageEvent) {
 		localKey = fmt.Sprintf("%s:thread:%s", channelID, threadTS)
 	}
 
-	// Mention gating in groups (with thread participation cache)
+	// Mention gating in groups (with thread participation cache).
+	// For foreign bot messages we force strict mention gating: ignore the
+	// thread participation cache so bot-to-bot loops cannot self-perpetuate.
 	if !isDM && c.RequireMention() {
 		mentioned := c.isBotMentioned(content)
 
+		// If the message explicitly mentions a *different* user/bot, defer to
+		// them: skip thread participation auto-reply so multi-agent channels
+		// don't have every previously-participating bot piling on.
+		hasOtherMention := !mentioned && containsOtherUserMention(content, c.botUserID)
+
 		// Thread participation cache: auto-reply in threads where bot previously participated
-		if !mentioned && threadTS != "" && c.threadTTL > 0 {
+		// (sender is human only — bot senders must always re-mention explicitly).
+		if !mentioned && !isBotMessage && !hasOtherMention && threadTS != "" && c.threadTTL > 0 {
 			participKey := channelID + ":particip:" + threadTS
 			if lastReply, ok := c.threadParticip.Load(participKey); ok {
 				if time.Since(lastReply.(time.Time)) < c.threadTTL {
