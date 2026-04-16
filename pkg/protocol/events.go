@@ -113,6 +113,9 @@ const (
 
 	// Background worker alerts (non-retryable LLM errors).
 	EventBackgroundError = "background.error"
+
+	// Pixel office visualization events.
+	EventPixelOffice = "pixeloffice"
 )
 
 // Agent event subtypes (in payload.type)

@@ -25,6 +25,7 @@ import (
 	"github.com/nextlevelbuilder/goclaw/internal/media"
 	memorypkg "github.com/nextlevelbuilder/goclaw/internal/memory"
 	"github.com/nextlevelbuilder/goclaw/internal/orchestration"
+	"github.com/nextlevelbuilder/goclaw/internal/pixeloffice"
 	"github.com/nextlevelbuilder/goclaw/internal/providers"
 	"github.com/nextlevelbuilder/goclaw/internal/sandbox"
 	"github.com/nextlevelbuilder/goclaw/internal/skills"
@@ -59,7 +60,7 @@ func wireExtras(
 	sandboxMgr sandbox.Manager,
 	redisClient any, // nil when built without -tags redis or when Redis is unconfigured
 	domainBus eventbus.DomainEventBus,
-) (*tools.ContextFileInterceptor, *mcpbridge.Pool, *media.Store, tools.PostTurnProcessor) {
+) (*tools.ContextFileInterceptor, *mcpbridge.Pool, *media.Store, tools.PostTurnProcessor, *pixeloffice.Collector) {
 	// 1. Build cache instances (in-memory or Redis depending on build tags)
 	agentCtxCache, userCtxCache := makeCaches(redisClient)
 
@@ -145,6 +146,9 @@ func wireExtras(
 	if stores.Episodic != nil {
 		autoInjector = memorypkg.NewAutoInjector(stores.Episodic, stores.EvolutionMetrics)
 	}
+
+	// Pixel office collector: receives agent events for office visualization.
+	pixelCollector := pixeloffice.NewCollector()
 
 	// vaultIntc is set later by wireVault but captured by closure in OnTextUploaded.
 	var vaultIntc *tools.VaultInterceptor
@@ -279,6 +283,9 @@ func wireExtras(
 					m["media"] = signed
 				}
 			}
+			// Feed pixel office collector for office visualization.
+			pixelCollector.HandleEvent(event)
+
 			msgBus.Broadcast(bus.Event{
 				Name:     protocol.EventAgent,
 				Payload:  event,
@@ -687,7 +694,7 @@ func wireExtras(
 	})
 
 	slog.Info("resolver + interceptors + cache subscribers wired")
-	return contextFileInterceptor, mcpPool, mediaStore, postTurn
+	return contextFileInterceptor, mcpPool, mediaStore, postTurn, pixelCollector
 }
 
 // kgSettings holds KG extraction settings from the builtin_tools table.
