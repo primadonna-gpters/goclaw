@@ -39,7 +39,7 @@ function addAgent(agent: AgentState): void {
   if (!seat) return;
 
   const char = createCharacter(agent.id, agent.name, agent.sprite, seat);
-  char.sessionCount = agent.session_count;
+  char.sessionCount = agent.sessionCount ?? 0;
   if (agent.detail) char.detail = agent.detail;
   applyStatus(char, agent.status, agent.detail);
 

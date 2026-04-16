@@ -6,8 +6,8 @@ export interface AgentState {
   status: AgentStatus;
   sprite: string;
   detail?: string;
-  session_count: number;
-  last_activity: string;
+  sessionCount: number;
+  lastActivity: string;
 }
 
 export interface PixelEvent {
