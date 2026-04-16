@@ -26,15 +26,14 @@ services:
   goclaw:
     image: ghcr.io/nextlevelbuilder/goclaw:latest
     build:
-      context: ${GOCLAW_DIR:-.}
+      context: .
       dockerfile: Dockerfile
       args:
-        ENABLE_OTEL: "${ENABLE_OTEL:-false}"
-        ENABLE_EMBEDUI: "${ENABLE_EMBEDUI:-true}"  # set to false when using WITH_WEB_NGINX
-        ENABLE_PYTHON: "${ENABLE_PYTHON:-true}"
-        ENABLE_FULL_SKILLS: "${ENABLE_FULL_SKILLS:-false}"
+        ENABLE_OTEL: "false"
+        ENABLE_EMBEDUI: "true"
+        ENABLE_PYTHON: "true"
+        ENABLE_FULL_SKILLS: "false"
         VERSION: "${GOCLAW_VERSION:-dev}"
-    # Uncomment to test update UI: GOCLAW_VERSION=v1.0.0
     ports:
       - "${GOCLAW_PORT:-18790}:18790"
     env_file:

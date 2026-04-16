@@ -1,0 +1,23 @@
+# Claude Max API Proxy — exposes Claude Max subscription as OpenAI-compatible API.
+# Reuses the existing Claude OAuth credentials from ~/.openclaw/claude-auth.
+
+services:
+  claude-proxy:
+    image: node:22-slim
+    command: >
+      sh -c "npm install -g claude-max-api-proxy @anthropic-ai/claude-code &&
+             sed -i 's/host = \"127.0.0.1\"/host = \"0.0.0.0\"/' /usr/local/lib/node_modules/claude-max-api-proxy/dist/server/index.js &&
+             claude-max-api"
+    volumes:
+      - /Users/primadonna/.openclaw/claude-auth:/home/node/.claude:rw
+    environment:
+      - HOME=/home/node
+    networks:
+      - goclaw-net
+    restart: unless-stopped
+
+  goclaw:
+    environment:
+      # Point GoClaw to the Claude Max proxy as an OpenAI-compatible provider
+      - GOCLAW_OPENAI_API_KEY=sk-unused
+      - GOCLAW_OPENAI_BASE_URL=http://claude-proxy:3456/v1
