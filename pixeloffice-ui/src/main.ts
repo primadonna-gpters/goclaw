@@ -15,13 +15,14 @@ const canvas = document.getElementById('office') as HTMLCanvasElement;
 const popup = document.getElementById('popup') as HTMLDivElement;
 const renderer = new Renderer(canvas);
 
-// Scale canvas to fit window
+// Scale canvas to fit window — integer scaling for crisp pixels
 function scaleCanvas(): void {
   const maxW = window.innerWidth * 0.95;
   const maxH = window.innerHeight * 0.95;
   const scaleX = maxW / renderer.width;
   const scaleY = maxH / renderer.height;
-  const scale = Math.max(2, Math.floor(Math.min(scaleX, scaleY)));
+  // Use integer scaling for crisp pixel art (minimum 1x)
+  const scale = Math.max(1, Math.floor(Math.min(scaleX, scaleY)));
   canvas.style.width = `${renderer.width * scale}px`;
   canvas.style.height = `${renderer.height * scale}px`;
 }

@@ -6,10 +6,15 @@ export const PLANT = 3;
 export const WATER_COOLER = 4;
 export const BOOKSHELF = 5;
 export const RUG = 6;
+export const WHITEBOARD = 7;
+export const CLOCK = 8;
+export const COAT_RACK = 9;
+export const COFFEE_TABLE = 10;
+export const BASEBOARD = 11;
 
-export const TILE_SIZE = 16;
-export const OFFICE_COLS = 40;
-export const OFFICE_ROWS = 30;
+export const TILE_SIZE = 24;
+export const OFFICE_COLS = 28;
+export const OFFICE_ROWS = 20;
 
 export interface Seat {
   col: number;
@@ -19,18 +24,18 @@ export interface Seat {
   facing: 'down' | 'up' | 'left' | 'right';
 }
 
-// 8 pre-defined desk seats arranged in 2 rows of 4
+// 8 pre-defined desk seats arranged in 2 rows of 4, spaced further apart
 export const SEATS: Seat[] = [
-  // Top row of desks (row 8-9), agents face down
-  { col: 6,  row: 8,  chairCol: 6,  chairRow: 9,  facing: 'down' },
-  { col: 12, row: 8,  chairCol: 12, chairRow: 9,  facing: 'down' },
-  { col: 18, row: 8,  chairCol: 18, chairRow: 9,  facing: 'down' },
-  { col: 24, row: 8,  chairCol: 24, chairRow: 9,  facing: 'down' },
-  // Bottom row of desks (row 16-17), agents face up
-  { col: 6,  row: 17, chairCol: 6,  chairRow: 16, facing: 'up' },
-  { col: 12, row: 17, chairCol: 12, chairRow: 16, facing: 'up' },
-  { col: 18, row: 17, chairCol: 18, chairRow: 16, facing: 'up' },
-  { col: 24, row: 17, chairCol: 24, chairRow: 16, facing: 'up' },
+  // Top row of desks (row 5-6), agents face down
+  { col: 4,  row: 5,  chairCol: 4,  chairRow: 6,  facing: 'down' },
+  { col: 10, row: 5,  chairCol: 10, chairRow: 6,  facing: 'down' },
+  { col: 16, row: 5,  chairCol: 16, chairRow: 6,  facing: 'down' },
+  { col: 22, row: 5,  chairCol: 22, chairRow: 6,  facing: 'down' },
+  // Bottom row of desks (row 12-13), agents face up
+  { col: 4,  row: 13, chairCol: 4,  chairRow: 12, facing: 'up' },
+  { col: 10, row: 13, chairCol: 10, chairRow: 12, facing: 'up' },
+  { col: 16, row: 13, chairCol: 16, chairRow: 12, facing: 'up' },
+  { col: 22, row: 13, chairCol: 22, chairRow: 12, facing: 'up' },
 ];
 
 export type TileMap = number[][];
@@ -41,33 +46,46 @@ export function buildTileMap(): TileMap {
   for (let r = 0; r < OFFICE_ROWS; r++) {
     const row: number[] = [];
     for (let c = 0; c < OFFICE_COLS; c++) {
-      if (r < 3) {
-        // Top wall
+      if (r === 0) {
+        // Top wall row 1
         row.push(WALL);
-      } else if (r === 3) {
-        // Wall bottom edge with windows
-        if (c > 2 && c < OFFICE_COLS - 3 && c % 5 === 0) {
+      } else if (r === 1) {
+        // Top wall row 2 — windows (each 3 tiles wide)
+        if ((c >= 3 && c <= 5) || (c >= 9 && c <= 11) || (c >= 16 && c <= 18) || (c >= 22 && c <= 24)) {
           row.push(WINDOW);
         } else {
           row.push(WALL);
         }
+      } else if (r === 2) {
+        // Baseboard strip
+        row.push(BASEBOARD);
       } else if (r === OFFICE_ROWS - 1 || c === 0 || c === OFFICE_COLS - 1) {
         // Border walls
         row.push(WALL);
       } else {
-        // Floor — add decorations
-        if (r === 12 && (c >= 10 && c <= 20)) {
+        // Floor area — add decorations
+        if (r === 9 && c >= 8 && c <= 18) {
           row.push(RUG);
-        } else if (r === 5 && c === 2) {
+        } else if (r === 3 && c === 2) {
           row.push(PLANT);
-        } else if (r === 5 && c === OFFICE_COLS - 3) {
+        } else if (r === 3 && c === OFFICE_COLS - 3) {
           row.push(PLANT);
-        } else if (r === 13 && c === 30) {
+        } else if (r === 15 && c === 2) {
+          row.push(PLANT);
+        } else if (r === 15 && c === OFFICE_COLS - 3) {
+          row.push(PLANT);
+        } else if (r === 10 && c === 25) {
           row.push(WATER_COOLER);
-        } else if (r === 5 && c === 33) {
+        } else if (r === 3 && (c === 13 || c === 14)) {
           row.push(BOOKSHELF);
-        } else if (r === 5 && c === 34) {
-          row.push(BOOKSHELF);
+        } else if (r === 3 && (c >= 7 && c <= 9)) {
+          row.push(WHITEBOARD);
+        } else if (r === 0 && c === 14) {
+          row.push(CLOCK);
+        } else if (r === 17 && c === 2) {
+          row.push(COAT_RACK);
+        } else if (r === 16 && (c >= 11 && c <= 13)) {
+          row.push(COFFEE_TABLE);
         } else {
           row.push(FLOOR);
         }
