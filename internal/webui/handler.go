@@ -8,7 +8,7 @@ import (
 
 // apiPrefixes are URL prefixes reserved for backend APIs.
 // Requests matching these are never served by the SPA handler.
-var apiPrefixes = []string{"/v1/", "/ws", "/health", "/mcp/"}
+var apiPrefixes = []string{"/v1/", "/ws", "/health", "/mcp/", "/pixel-office/"}
 
 // Handler returns an http.Handler that serves the embedded SPA.
 // Returns nil if no assets are embedded (built without embedui tag).
