@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pixel Office</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #1a1a2e; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; }
+    canvas { image-rendering: pixelated; image-rendering: crisp-edges; cursor: pointer; }
+    #popup { display: none; position: absolute; background: #1e1e2e; border: 2px solid #4488ff; border-radius: 8px; padding: 16px; color: #c9d1d9; font-family: monospace; font-size: 12px; min-width: 240px; z-index: 10; pointer-events: auto; }
+    #popup.visible { display: block; }
+    #popup h3 { color: #fff; margin-bottom: 8px; }
+    #popup .status { margin-bottom: 4px; }
+    #popup .activity { border-top: 1px solid #333; margin-top: 8px; padding-top: 8px; }
+    #popup .activity div { margin-bottom: 2px; color: #8b949e; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <canvas id="office"></canvas>
+  <div id="popup"></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
