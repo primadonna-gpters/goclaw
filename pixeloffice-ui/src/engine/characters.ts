@@ -27,12 +27,30 @@ export interface Character {
   activities: Activity[];
   detail: string;
   sessionCount: number;
+  // Alive-idle additions
+  wanderDelay: number;        // random delay before each wander (ms)
+  breathPhase: number;        // breathing oscillation phase (radians)
+  idleMicroTimer: number;     // timer for micro-actions (look around, stretch)
+  nextMicroAction: number;    // when to do the next micro-action (ms)
+  isStretching: boolean;      // whether character is currently stretching
+  stretchTimer: number;       // how long the stretch lasts
 }
 
-const WALK_SPEED = 40; // px/s
-const IDLE_WANDER_TIME = 300_000; // 5 minutes in ms
+const WALK_SPEED = 60; // px/s (increased from 40)
+const IDLE_WANDER_TIME = 15_000; // 15 seconds (reduced from 5 minutes)
 const ERROR_DURATION = 3000; // 3 seconds
 const ANIM_FRAME_MS = 300;
+const MICRO_ACTION_MIN = 3000;  // 3s minimum between micro-actions
+const MICRO_ACTION_MAX = 8000;  // 8s maximum
+const STRETCH_DURATION = 1500;  // 1.5s stretch animation
+
+function randomWanderDelay(): number {
+  return 5000 + Math.random() * 10000; // 5-15s random delay
+}
+
+function randomMicroDelay(): number {
+  return MICRO_ACTION_MIN + Math.random() * (MICRO_ACTION_MAX - MICRO_ACTION_MIN);
+}
 
 export function createCharacter(id: string, name: string, sprite: string, seat: Seat): Character {
   const x = seat.chairCol * TILE_SIZE;
@@ -55,15 +73,58 @@ export function createCharacter(id: string, name: string, sprite: string, seat: 
     activities: [],
     detail: '',
     sessionCount: 0,
+    wanderDelay: randomWanderDelay(),
+    breathPhase: Math.random() * Math.PI * 2, // randomize so they don't breathe in sync
+    idleMicroTimer: 0,
+    nextMicroAction: randomMicroDelay(),
+    isStretching: false,
+    stretchTimer: 0,
   };
 }
 
 export function updateCharacter(char: Character, dt: number): void {
+  // Always advance breathing phase (even when typing/walking, for subtle life)
+  char.breathPhase += dt * 0.003; // slow oscillation (~2s period)
+  if (char.breathPhase > Math.PI * 200) char.breathPhase -= Math.PI * 200; // prevent overflow
+
   switch (char.state) {
     case 'idle': {
+      // Stretch animation
+      if (char.isStretching) {
+        char.stretchTimer += dt;
+        if (char.stretchTimer >= STRETCH_DURATION) {
+          char.isStretching = false;
+          char.stretchTimer = 0;
+          char.direction = char.seat.facing; // return to seat facing
+        }
+        break; // don't process wander or micro during stretch
+      }
+
       char.idleTimer += dt;
-      if (char.idleTimer >= IDLE_WANDER_TIME) {
+      char.idleMicroTimer += dt;
+
+      // Micro-actions: look around or stretch
+      if (char.idleMicroTimer >= char.nextMicroAction) {
+        char.idleMicroTimer = 0;
+        char.nextMicroAction = randomMicroDelay();
+
+        const action = Math.random();
+        if (action < 0.6) {
+          // Look around: change direction briefly
+          const dirs: Array<'down' | 'up' | 'left' | 'right'> = ['down', 'up', 'left', 'right'];
+          const filtered = dirs.filter(d => d !== char.direction);
+          char.direction = filtered[Math.floor(Math.random() * filtered.length)];
+        } else {
+          // Stretch
+          char.isStretching = true;
+          char.stretchTimer = 0;
+        }
+      }
+
+      // Wander after idle time + random delay
+      if (char.idleTimer >= IDLE_WANDER_TIME + char.wanderDelay) {
         char.idleTimer = 0;
+        char.wanderDelay = randomWanderDelay(); // new random delay for next time
         // Pick a random nearby walkable spot
         const wanderX = clamp(
           char.seat.chairCol * TILE_SIZE + (Math.random() - 0.5) * 80,
@@ -147,6 +208,25 @@ export function updateCharacter(char: Character, dt: number): void {
   }
 }
 
+/** Get the breathing y-offset for subtle bobbing animation */
+export function getBreathOffset(char: Character): number {
+  if (char.state === 'idle' || char.state === 'typing' || char.state === 'cron') {
+    return Math.sin(char.breathPhase) * 0.8; // subtle 0.8px oscillation
+  }
+  return 0;
+}
+
+/** Get whether the character is currently stretching */
+export function isStretching(char: Character): boolean {
+  return char.isStretching;
+}
+
+/** Get stretch progress 0..1 */
+export function getStretchProgress(char: Character): number {
+  if (!char.isStretching) return 0;
+  return Math.min(1, char.stretchTimer / STRETCH_DURATION);
+}
+
 export function applyStatus(char: Character, status: AgentStatus, detail?: string): void {
   if (detail !== undefined) {
     char.detail = detail;
@@ -158,6 +238,7 @@ export function applyStatus(char: Character, status: AgentStatus, detail?: strin
       char.state = 'idle';
       char.frame = 0;
       char.idleTimer = 0;
+      char.isStretching = false;
       break;
     case 'typing':
     case 'tool':
@@ -165,6 +246,7 @@ export function applyStatus(char: Character, status: AgentStatus, detail?: strin
       char.frame = 0;
       char.frameTimer = 0;
       char.idleTimer = 0;
+      char.isStretching = false;
       // Return to seat if wandering
       returnToSeat(char);
       break;
@@ -173,12 +255,14 @@ export function applyStatus(char: Character, status: AgentStatus, detail?: strin
       char.frame = 0;
       char.frameTimer = 0;
       char.idleTimer = 0;
+      char.isStretching = false;
       returnToSeat(char);
       break;
     case 'error':
       char.state = 'error';
       char.errorTimer = 0;
       char.idleTimer = 0;
+      char.isStretching = false;
       returnToSeat(char);
       break;
   }

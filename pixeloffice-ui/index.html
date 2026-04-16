@@ -6,7 +6,8 @@
   <title>Pixel Office</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #2a2218; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #1a1520; }
+    body { display: flex; align-items: center; justify-content: center; }
     canvas { image-rendering: pixelated; image-rendering: crisp-edges; cursor: pointer; }
     #popup { display: none; position: absolute; background: #1e1e2e; border: 2px solid #4488ff; border-radius: 8px; padding: 16px; color: #c9d1d9; font-family: monospace; font-size: 12px; min-width: 240px; z-index: 10; pointer-events: auto; }
     #popup.visible { display: block; }

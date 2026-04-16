@@ -11,6 +11,7 @@ export const CLOCK = 8;
 export const COAT_RACK = 9;
 export const COFFEE_TABLE = 10;
 export const BASEBOARD = 11;
+export const LIGHT_RAY = 12; // floor tile with window light ray
 
 export const TILE_SIZE = 24;
 export const OFFICE_COLS = 28;
@@ -40,6 +41,28 @@ export const SEATS: Seat[] = [
 
 export type TileMap = number[][];
 
+// Window column ranges for light ray computation
+const WINDOW_RANGES = [
+  [3, 5], [9, 11], [16, 18], [22, 24],
+];
+
+function isLightRayTile(r: number, c: number): boolean {
+  // Light rays: diagonal stripes on the floor below windows (rows 3-7)
+  // Each window casts light 1-2 tiles to the right and down
+  if (r < 3 || r > 7) return false;
+  for (const [wStart, wEnd] of WINDOW_RANGES) {
+    // Light ray extends from window position, shifted right as it goes down
+    const depth = r - 2; // how far from baseboard
+    const shiftedStart = wStart + Math.floor(depth * 0.5);
+    const shiftedEnd = wEnd + Math.floor(depth * 0.5) + 1;
+    if (c >= shiftedStart && c <= shiftedEnd) {
+      // Only alternating diagonal stripes for a beam pattern
+      if ((c + r) % 2 === 0) return true;
+    }
+  }
+  return false;
+}
+
 export function buildTileMap(): TileMap {
   const map: TileMap = [];
 
@@ -47,12 +70,19 @@ export function buildTileMap(): TileMap {
     const row: number[] = [];
     for (let c = 0; c < OFFICE_COLS; c++) {
       if (r === 0) {
-        // Top wall row 1
-        row.push(WALL);
+        // Top wall row 1 — clock in the middle
+        if (c === 14) {
+          row.push(CLOCK);
+        } else {
+          row.push(WALL);
+        }
       } else if (r === 1) {
         // Top wall row 2 — windows (each 3 tiles wide)
         if ((c >= 3 && c <= 5) || (c >= 9 && c <= 11) || (c >= 16 && c <= 18) || (c >= 22 && c <= 24)) {
           row.push(WINDOW);
+        } else if (c === 20) {
+          // Second clock on the wall
+          row.push(CLOCK);
         } else {
           row.push(WALL);
         }
@@ -80,12 +110,12 @@ export function buildTileMap(): TileMap {
           row.push(BOOKSHELF);
         } else if (r === 3 && (c >= 7 && c <= 9)) {
           row.push(WHITEBOARD);
-        } else if (r === 0 && c === 14) {
-          row.push(CLOCK);
         } else if (r === 17 && c === 2) {
           row.push(COAT_RACK);
         } else if (r === 16 && (c >= 11 && c <= 13)) {
           row.push(COFFEE_TABLE);
+        } else if (isLightRayTile(r, c)) {
+          row.push(LIGHT_RAY);
         } else {
           row.push(FLOOR);
         }
@@ -108,5 +138,5 @@ export function getSeatCount(): number {
 export function isWalkable(map: TileMap, col: number, row: number): boolean {
   if (row < 0 || row >= OFFICE_ROWS || col < 0 || col >= OFFICE_COLS) return false;
   const tile = map[row][col];
-  return tile === FLOOR || tile === RUG;
+  return tile === FLOOR || tile === RUG || tile === LIGHT_RAY;
 }

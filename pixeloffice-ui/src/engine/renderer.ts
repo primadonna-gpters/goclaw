@@ -1,18 +1,35 @@
 import type { TileMap } from './office';
 import type { Character } from './characters';
+import { getBreathOffset, isStretching, getStretchProgress } from './characters';
 import {
   TILE_SIZE, OFFICE_COLS, OFFICE_ROWS,
   WALL, WINDOW, PLANT, WATER_COOLER, BOOKSHELF, RUG,
-  WHITEBOARD, CLOCK, COAT_RACK, COFFEE_TABLE, BASEBOARD,
+  WHITEBOARD, CLOCK, COAT_RACK, COFFEE_TABLE, BASEBOARD, LIGHT_RAY,
 } from './office';
 import { getSheet } from '../sprites/loader';
 
 const T = TILE_SIZE; // shorthand
 
+// Dust mote particles
+interface DustMote {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  alpha: number;
+  life: number;
+  maxLife: number;
+}
+
 export class Renderer {
   private ctx: CanvasRenderingContext2D;
   readonly width: number;
   readonly height: number;
+  private dustMotes: DustMote[] = [];
+  private dustTimer = 0;
+  private floorShadows: Array<{ x: number; y: number; w: number; h: number }> = [];
+  private ambientGradient: CanvasGradient | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.width = OFFICE_COLS * TILE_SIZE;
@@ -23,10 +40,36 @@ export class Renderer {
     if (!ctx) throw new Error('Canvas 2D context not available');
     ctx.imageSmoothingEnabled = false;
     this.ctx = ctx;
+
+    // Pre-generate random floor shadows/stains
+    this.generateFloorShadows();
+
+    // Pre-create ambient light gradient
+    this.ambientGradient = ctx.createRadialGradient(
+      this.width / 2, this.height / 2, this.width * 0.15,
+      this.width / 2, this.height / 2, this.width * 0.7,
+    );
+    this.ambientGradient.addColorStop(0, 'rgba(255,240,220,0.04)');
+    this.ambientGradient.addColorStop(0.5, 'rgba(0,0,0,0)');
+    this.ambientGradient.addColorStop(1, 'rgba(0,0,0,0.06)');
+  }
+
+  private generateFloorShadows(): void {
+    // Scatter random subtle shadows/stains on the floor
+    const rng = mulberry32(42); // seeded random for consistency
+    for (let i = 0; i < 12; i++) {
+      this.floorShadows.push({
+        x: Math.floor(rng() * (OFFICE_COLS - 4) + 2) * T + Math.floor(rng() * T),
+        y: Math.floor(rng() * (OFFICE_ROWS - 6) + 4) * T + Math.floor(rng() * T),
+        w: 3 + Math.floor(rng() * 5),
+        h: 2 + Math.floor(rng() * 3),
+      });
+    }
   }
 
   render(tileMap: TileMap, characters: Character[]): void {
     const ctx = this.ctx;
+    const now = performance.now();
     ctx.clearRect(0, 0, this.width, this.height);
 
     // Draw tiles
@@ -63,7 +106,7 @@ export class Renderer {
             this.drawWhiteboard(ctx, x, y);
             break;
           case CLOCK:
-            this.drawWall(ctx, x, y, 0, c);
+            this.drawWall(ctx, x, y, r, c);
             this.drawClock(ctx, x, y);
             break;
           case COAT_RACK:
@@ -77,6 +120,10 @@ export class Renderer {
           case RUG:
             this.drawRug(ctx, x, y, c, r);
             break;
+          case LIGHT_RAY:
+            this.drawFloor(ctx, x, y, c, r);
+            this.drawLightRay(ctx, x, y, r);
+            break;
           default:
             this.drawFloor(ctx, x, y, c, r);
             break;
@@ -84,9 +131,15 @@ export class Renderer {
       }
     }
 
+    // Draw floor shadows/stains for texture variety
+    for (const shadow of this.floorShadows) {
+      ctx.fillStyle = 'rgba(60,40,20,0.06)';
+      ctx.fillRect(shadow.x, shadow.y, shadow.w, shadow.h);
+    }
+
     // Draw desks for each character's seat
     for (const char of characters) {
-      this.drawDesk(char);
+      this.drawDesk(char, now);
     }
 
     // Z-sort characters by Y position and draw
@@ -94,6 +147,78 @@ export class Renderer {
     for (let i = 0; i < sorted.length; i++) {
       this.drawCharacter(sorted[i], i);
     }
+
+    // Update and draw dust motes
+    this.updateDustMotes(now);
+    this.drawDustMotes(ctx);
+
+    // Ambient light gradient overlay
+    if (this.ambientGradient) {
+      ctx.fillStyle = this.ambientGradient;
+      ctx.fillRect(0, 0, this.width, this.height);
+    }
+  }
+
+  // --- Dust particle system ---
+
+  private updateDustMotes(now: number): void {
+    const dt = 16; // approximate frame time
+
+    // Spawn new motes periodically
+    this.dustTimer += dt;
+    if (this.dustTimer > 800 && this.dustMotes.length < 20) {
+      this.dustTimer = 0;
+      this.dustMotes.push({
+        x: Math.random() * this.width,
+        y: Math.random() * this.height * 0.6 + this.height * 0.1,
+        vx: (Math.random() - 0.5) * 3,
+        vy: -0.2 - Math.random() * 0.5,
+        size: 1 + Math.random(),
+        alpha: 0,
+        life: 0,
+        maxLife: 3000 + Math.random() * 4000,
+      });
+    }
+
+    // Update existing motes
+    for (let i = this.dustMotes.length - 1; i >= 0; i--) {
+      const m = this.dustMotes[i];
+      m.life += dt;
+      m.x += m.vx * 0.3;
+      m.y += m.vy * 0.3;
+      // Gentle sine drift
+      m.x += Math.sin(now * 0.001 + i) * 0.15;
+
+      // Fade in, hold, fade out
+      const progress = m.life / m.maxLife;
+      if (progress < 0.2) {
+        m.alpha = progress / 0.2;
+      } else if (progress > 0.7) {
+        m.alpha = (1 - progress) / 0.3;
+      } else {
+        m.alpha = 1;
+      }
+
+      if (m.life >= m.maxLife) {
+        this.dustMotes.splice(i, 1);
+      }
+    }
+  }
+
+  private drawDustMotes(ctx: CanvasRenderingContext2D): void {
+    for (const m of this.dustMotes) {
+      ctx.fillStyle = `rgba(255,240,200,${(m.alpha * 0.2).toFixed(3)})`;
+      ctx.fillRect(Math.round(m.x), Math.round(m.y), Math.ceil(m.size), Math.ceil(m.size));
+    }
+  }
+
+  // --- Light ray on floor ---
+
+  private drawLightRay(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+    const depth = r - 2;
+    const intensity = Math.max(0.02, 0.12 - depth * 0.02);
+    ctx.fillStyle = `rgba(255,250,220,${intensity})`;
+    ctx.fillRect(x, y, T, T);
   }
 
   // --- Tile renderers ---
@@ -227,6 +352,10 @@ export class Renderer {
     // Window sill
     ctx.fillStyle = '#d4c4a8';
     ctx.fillRect(x, y + T - 2, T, 2);
+
+    // Light glow below window sill
+    ctx.fillStyle = 'rgba(255,250,220,0.08)';
+    ctx.fillRect(x - 2, y + T, T + 4, 4);
   }
 
   private drawPlant(ctx: CanvasRenderingContext2D, x: number, y: number): void {
@@ -411,36 +540,57 @@ export class Renderer {
     ctx.fillRect(x + 5, y + 10, 2, 2);  // 9
     ctx.fillRect(x + 17, y + 10, 2, 2); // 3
 
-    // Hands (animated by time)
+    // Hands (animated by real time)
     const now = new Date();
     const hours = now.getHours() % 12;
-    const _minutes = now.getMinutes();
-    ctx.fillStyle = '#222222';
-    // Simple hour hand
+    const minutes = now.getMinutes();
+    const seconds = now.getSeconds();
     const cx = x + 12;
     const cy = y + 11;
-    if (hours >= 9 || hours < 3) {
-      ctx.fillRect(cx, cy - 3, 1, 3);
-    } else if (hours >= 3 && hours < 6) {
-      ctx.fillRect(cx, cy, 3, 1);
-    } else {
-      ctx.fillRect(cx, cy, 1, 3);
-    }
-    // Minute hand
+
+    // Hour hand — proper angle calculation
+    const hourAngle = ((hours + minutes / 60) / 12) * Math.PI * 2 - Math.PI / 2;
+    const hx = Math.round(Math.cos(hourAngle) * 3);
+    const hy = Math.round(Math.sin(hourAngle) * 3);
+    ctx.fillStyle = '#222222';
+    // Draw hour hand as a line of pixels
+    this.drawPixelLine(ctx, cx, cy, cx + hx, cy + hy);
+
+    // Minute hand — longer
+    const minAngle = (minutes / 60) * Math.PI * 2 - Math.PI / 2;
+    const mx = Math.round(Math.cos(minAngle) * 5);
+    const my = Math.round(Math.sin(minAngle) * 5);
     ctx.fillStyle = '#444444';
-    if (_minutes < 15) {
-      ctx.fillRect(cx, cy - 4, 1, 4);
-    } else if (_minutes < 30) {
-      ctx.fillRect(cx, cy, 4, 1);
-    } else if (_minutes < 45) {
-      ctx.fillRect(cx, cy, 1, 4);
-    } else {
-      ctx.fillRect(cx - 4, cy, 4, 1);
-    }
+    this.drawPixelLine(ctx, cx, cy, cx + mx, cy + my);
+
+    // Second hand — thin tick
+    const secAngle = (seconds / 60) * Math.PI * 2 - Math.PI / 2;
+    const sx = Math.round(Math.cos(secAngle) * 4);
+    const sy = Math.round(Math.sin(secAngle) * 4);
+    ctx.fillStyle = '#cc0000';
+    this.drawPixelLine(ctx, cx, cy, cx + sx, cy + sy);
 
     // Center dot
     ctx.fillStyle = '#cc0000';
     ctx.fillRect(cx, cy, 1, 1);
+  }
+
+  private drawPixelLine(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number): void {
+    // Bresenham-style pixel line
+    const dx = Math.abs(x1 - x0);
+    const dy = Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1;
+    const sy = y0 < y1 ? 1 : -1;
+    let err = dx - dy;
+    let cx = x0;
+    let cy = y0;
+    for (let i = 0; i < 20; i++) { // max 20 steps safety
+      ctx.fillRect(cx, cy, 1, 1);
+      if (cx === x1 && cy === y1) break;
+      const e2 = 2 * err;
+      if (e2 > -dy) { err -= dy; cx += sx; }
+      if (e2 < dx) { err += dx; cy += sy; }
+    }
   }
 
   private drawCoatRack(ctx: CanvasRenderingContext2D, x: number, y: number): void {
@@ -526,7 +676,7 @@ export class Renderer {
 
   // --- Desk and Chair ---
 
-  private drawDesk(char: Character): void {
+  private drawDesk(char: Character, now: number): void {
     const ctx = this.ctx;
     const deskCol = char.seat.col;
     const deskRow = char.seat.row;
@@ -558,13 +708,13 @@ export class Renderer {
     ctx.fillRect(dx - 10, dy + T, T + 22, 1);
 
     // Monitor
-    this.drawMonitor(ctx, dx, dy, char);
+    this.drawMonitor(ctx, dx, dy, char, now);
 
     // Chair
     this.drawChair(ctx, char);
   }
 
-  private drawMonitor(ctx: CanvasRenderingContext2D, dx: number, dy: number, char: Character): void {
+  private drawMonitor(ctx: CanvasRenderingContext2D, dx: number, dy: number, char: Character, now: number): void {
     // Monitor frame
     ctx.fillStyle = '#333333';
     ctx.fillRect(dx + 2, dy - 6, 20, 14);
@@ -591,6 +741,11 @@ export class Renderer {
       ctx.fillRect(dx + 6, dy, 12, 1);
       ctx.fillRect(dx + 6, dy + 2, 6, 1);
       ctx.fillRect(dx + 6, dy + 4, 10, 1);
+
+      // Screen flicker effect (subtle brightness pulsing)
+      const flicker = Math.sin(now * 0.005 + char.x) * 0.03 + 0.02;
+      ctx.fillStyle = `rgba(200,220,255,${flicker.toFixed(3)})`;
+      ctx.fillRect(dx + 4, dy - 4, 16, 10);
     } else if (char.state === 'error') {
       screenColor = '#331a1a';
       glowColor = 'rgba(255,68,68,0.15)';
@@ -605,9 +760,14 @@ export class Renderer {
     } else {
       ctx.fillStyle = screenColor;
       ctx.fillRect(dx + 4, dy - 4, 16, 10);
-      // Screensaver / dim
+      // Screensaver / dim — subtle flicker for idle screens too
       ctx.fillStyle = '#223344';
       ctx.fillRect(dx + 8, dy - 1, 8, 4);
+
+      // Idle screen flicker (very subtle)
+      const idleFlicker = Math.sin(now * 0.002 + char.x * 0.5) * 0.015 + 0.01;
+      ctx.fillStyle = `rgba(100,150,200,${idleFlicker.toFixed(3)})`;
+      ctx.fillRect(dx + 4, dy - 4, 16, 10);
     }
 
     // Screen glow on desk
@@ -675,8 +835,9 @@ export class Renderer {
 
   drawCharacter(char: Character, index: number): void {
     const ctx = this.ctx;
+    const breathY = getBreathOffset(char);
     const x = Math.round(char.x);
-    const y = Math.round(char.y);
+    const y = Math.round(char.y + breathY);
 
     // Try to use sprite sheet
     const sheet = getSheet(char.sprite, index);
@@ -685,13 +846,21 @@ export class Renderer {
       const frameCol = char.frame % 4;
       const sx = frameCol * 24;
       const sy = dirRow * 32;
-      ctx.drawImage(sheet, sx, sy, 24, 32, x, y - 8, 24, 32);
+
+      // Stretch animation: raise arms (slight y shift up)
+      if (isStretching(char)) {
+        const progress = getStretchProgress(char);
+        const stretchLift = Math.sin(progress * Math.PI) * 2;
+        ctx.drawImage(sheet, sx, sy, 24, 32, x, y - 8 - stretchLift, 24, 32);
+      } else {
+        ctx.drawImage(sheet, sx, sy, 24, 32, x, y - 8, 24, 32);
+      }
     } else {
       // Fallback: draw simple rectangles
       this.drawCharFallback(ctx, char, x, y);
     }
 
-    // Error overlay — shake effect
+    // Error overlay -- shake effect
     if (char.state === 'error') {
       const shake = Math.sin(char.errorTimer * 0.05) * 2;
       ctx.fillStyle = 'rgba(255, 0, 0, 0.25)';
@@ -707,7 +876,7 @@ export class Renderer {
       ctx.textAlign = 'left';
     }
 
-    // Cron overlay — sparkle
+    // Cron overlay -- sparkle
     if (char.state === 'cron') {
       const t = performance.now() * 0.003;
       ctx.fillStyle = '#44ff88';
@@ -716,26 +885,26 @@ export class Renderer {
       ctx.fillRect(x + Math.sin(t + 2) * 6 + 8, y - 18, 3, 3);
     }
 
-    // Name tag — pill-shaped with dark background
+    // Name tag -- larger pill with dark background
     const displayName = char.name.length > 10 ? char.name.slice(0, 9) + '..' : char.name;
-    ctx.font = '9px monospace';
+    ctx.font = '10px monospace';
     ctx.textAlign = 'center';
     const nameWidth = ctx.measureText(displayName).width;
-    const pillW = nameWidth + 8;
+    const pillW = nameWidth + 10;
     const pillX = x + 12 - pillW / 2;
     const pillY = y + 24;
 
     // Dark pill background
-    ctx.fillStyle = 'rgba(0,0,0,0.65)';
-    roundRect(ctx, pillX, pillY, pillW, 13, 3);
+    ctx.fillStyle = 'rgba(20,15,30,0.75)';
+    roundRect(ctx, pillX, pillY, pillW, 14, 4);
     ctx.fill();
 
     // Name text
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(displayName, x + 12, pillY + 10);
+    ctx.fillText(displayName, x + 12, pillY + 11);
     ctx.textAlign = 'left';
 
-    // Status bubble
+    // Status bubble -- more prominent
     if (char.state !== 'idle' && char.state !== 'walking') {
       this.drawStatusBubble(ctx, x, y, char);
     }
@@ -745,30 +914,34 @@ export class Renderer {
     const icon = statusIcon(char.state);
     const label = statusLabel(char.state);
     const color = statusColor(char.state);
+    const bgColor = statusBgColor(char.state);
     const text = `${icon} ${label}`;
 
-    ctx.font = '8px monospace';
+    ctx.font = 'bold 9px monospace';
     const textW = ctx.measureText(text).width;
-    const bubbleW = textW + 10;
+    const bubbleW = textW + 12;
+    const bubbleH = 15;
     const bubbleX = x + 24;
-    const bubbleY = y - 18;
+    const bubbleY = y - 20;
 
-    // Pill background
-    ctx.fillStyle = 'rgba(0,0,0,0.75)';
-    roundRect(ctx, bubbleX, bubbleY, bubbleW, 12, 3);
+    // Colored pill background
+    ctx.fillStyle = bgColor;
+    roundRect(ctx, bubbleX, bubbleY, bubbleW, bubbleH, 4);
     ctx.fill();
 
-    // Colored left accent
-    ctx.fillStyle = color;
-    ctx.fillRect(bubbleX + 1, bubbleY + 2, 2, 8);
+    // Slight border
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    roundRect(ctx, bubbleX, bubbleY, bubbleW, bubbleH, 4);
+    ctx.stroke();
 
-    // Text
-    ctx.fillStyle = color;
-    ctx.fillText(text, bubbleX + 5, bubbleY + 9);
+    // White text
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(text, bubbleX + 6, bubbleY + 11);
 
     // Pointer triangle
-    ctx.fillStyle = 'rgba(0,0,0,0.75)';
-    ctx.fillRect(bubbleX - 2, bubbleY + 4, 3, 4);
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(bubbleX - 2, bubbleY + 4, 3, 5);
   }
 
   private drawCharFallback(ctx: CanvasRenderingContext2D, char: Character, x: number, y: number): void {
@@ -802,6 +975,15 @@ export class Renderer {
       const armY = char.frame % 2 === 0 ? y + 8 : y + 7;
       ctx.fillRect(x + 1, armY, 4, 3);
       ctx.fillRect(x + 19, armY + (char.frame % 2 === 0 ? 1 : 0), 4, 3);
+    }
+
+    // Stretch effect for fallback
+    if (isStretching(char)) {
+      ctx.fillStyle = '#ffcc88';
+      const progress = getStretchProgress(char);
+      const lift = Math.sin(progress * Math.PI) * 3;
+      ctx.fillRect(x + 1, y + 4 - lift, 4, 3);
+      ctx.fillRect(x + 19, y + 4 - lift, 4, 3);
     }
   }
 
@@ -861,6 +1043,15 @@ function statusColor(state: string): string {
   }
 }
 
+function statusBgColor(state: string): string {
+  switch (state) {
+    case 'typing': return 'rgba(40,80,140,0.85)';
+    case 'cron': return 'rgba(30,100,60,0.85)';
+    case 'error': return 'rgba(140,30,30,0.85)';
+    default: return 'rgba(60,60,60,0.85)';
+  }
+}
+
 function statusIcon(state: string): string {
   switch (state) {
     case 'typing': return '\u25B6'; // play triangle
@@ -877,4 +1068,14 @@ function statusLabel(state: string): string {
     case 'error': return 'ERROR';
     default: return state.toUpperCase().slice(0, 5);
   }
+}
+
+// Seeded PRNG for deterministic floor shadows
+function mulberry32(a: number): () => number {
+  return function() {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
 }
