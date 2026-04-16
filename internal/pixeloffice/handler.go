@@ -42,7 +42,11 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	if h.uiFS != nil {
 		fileServer := http.FileServer(http.FS(h.uiFS))
 		mux.Handle("/pixel-office/", h.spaHandler(fileServer))
+		slog.Info("pixel-office: serving embedded UI at /pixel-office/")
+	} else {
+		slog.Info("pixel-office: UI not embedded (uiFS is nil), API-only mode")
 	}
+	slog.Info("pixel-office: routes registered", "hasUI", h.uiFS != nil)
 }
 
 // snapshotResponse is the JSON envelope for the snapshot endpoint.
