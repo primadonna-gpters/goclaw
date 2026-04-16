@@ -25,10 +25,15 @@ func parseJSONResponse(data []byte) (*ChatResponse, error) {
 		}
 	}
 
-	// Last resort: treat entire output as text response
+	// Last resort: treat entire output as text response.
+	// Guard: do NOT forward raw JSON (arrays or objects) as text — these are
+	// unprocessed CLI events (e.g. system/init) that must never reach the user.
 	trimmed := strings.TrimSpace(string(data))
 	if trimmed == "" {
 		return nil, fmt.Errorf("claude-cli: empty response")
+	}
+	if len(trimmed) > 0 && (trimmed[0] == '[' || trimmed[0] == '{') {
+		return nil, fmt.Errorf("claude-cli: no usable result in JSON output (got raw events only)")
 	}
 	return &ChatResponse{
 		Content:      trimmed,
