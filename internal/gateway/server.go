@@ -198,19 +198,17 @@ func (s *Server) BuildMux() *http.ServeMux {
 		}
 	}
 
-	// Pixel office: register directly on main mux (before webui catch-all).
-	if s.pixelOffice != nil {
-		s.pixelOffice.RegisterRoutes(mux)
-		slog.Info("buildmux: pixel office routes registered on main mux")
-	} else {
-		slog.Info("buildmux: s.pixelOffice is nil, skipping")
-	}
-	slog.Info("buildmux: handler count", "total", len(s.handlers))
-
 	// Embedded web UI (built with -tags embedui). Catch-all after all API routes.
 	if h := webui.Handler(); h != nil {
 		mux.Handle("/", h)
 		slog.Info("serving embedded web UI")
+	}
+
+	// Pixel office: register AFTER webui catch-all.
+	// Go 1.22+ ServeMux: more specific patterns override broader ones regardless of order.
+	if s.pixelOffice != nil {
+		s.pixelOffice.RegisterRoutes(mux)
+		slog.Info("pixel-office: routes registered on main mux")
 	}
 
 	s.mux = mux
