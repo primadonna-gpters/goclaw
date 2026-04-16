@@ -41,9 +41,9 @@ func (t *CreateVideoTool) callGeminiVideoGen(ctx context.Context, apiKey, apiBas
 		"instances": []map[string]any{instance},
 		"parameters": map[string]any{
 			"aspectRatio":      aspectRatio,
-			"durationSeconds":  fmt.Sprintf("%d", duration), // Veo 3.1 expects string
+			"durationSeconds":  duration, // Veo API expects number
 			"resolution":       GetParamString(params, "resolution", "720p"),
-			"generateAudio":    GetParamBool(params, "generate_audio", true),
+			// generateAudio removed — not supported by current Veo models
 			"personGeneration": GetParamString(params, "person_generation", "allow_all"),
 		},
 	}

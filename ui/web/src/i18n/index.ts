@@ -117,9 +117,9 @@ import koPackages from "./locales/ko/packages.json";
 import koTenants from "./locales/ko/tenants.json";
 import koSystemSettings from "./locales/ko/system-settings.json";
 import koImportExport from "./locales/ko/import-export.json";
+import koVault from "./locales/ko/vault.json";
 import koV3Capabilities from "./locales/ko/v3-capabilities.json";
 import koBackup from "./locales/ko/backup.json";
-import koVault from "./locales/ko/vault.json";
 
 // --- ZH namespaces ---
 import zhCommon from "./locales/zh/common.json";
@@ -211,7 +211,7 @@ i18n.use(initReactI18next).init({
       channels: koChannels, providers: koProviders, traces: koTraces,
       events: koEvents, usage: koUsage,
       approvals: koApprovals, nodes: koNodes, logs: koLogs, tools: koTools,
-      mcp: koMcp, tts: koTts, setup: koSetup, memory: koMemory, vault: koVault, storage: koStorage,
+      mcp: koMcp, tts: koTts, setup: koSetup, memory: koMemory, storage: koStorage,
       "pending-messages": koPendingMessages,
       contacts: koContacts, activity: koActivity, "api-keys": koApiKeys,
       "cli-credentials": koCliCredentials,
@@ -219,6 +219,7 @@ i18n.use(initReactI18next).init({
       tenants: koTenants,
       "system-settings": koSystemSettings,
       "import-export": koImportExport,
+      vault: koVault,
       "v3-capabilities": koV3Capabilities,
       backup: koBackup,
     },
