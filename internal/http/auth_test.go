@@ -140,6 +140,12 @@ func (m *mockPairingStore) RevokePairing(context.Context, string, string) error 
 func (m *mockPairingStore) IsPaired(_ context.Context, senderID, channel string) (bool, error) {
 	return m.paired[senderID+":"+channel], nil
 }
+func (m *mockPairingStore) GetPaired(_ context.Context, senderID, channel string) (*store.PairedDeviceData, error) {
+	if m.paired[senderID+":"+channel] {
+		return &store.PairedDeviceData{SenderID: senderID, Channel: channel}, nil
+	}
+	return nil, nil
+}
 func (m *mockPairingStore) ListPending(context.Context) []store.PairingRequestData { return nil }
 func (m *mockPairingStore) ListPaired(context.Context) []store.PairedDeviceData    { return nil }
 func (m *mockPairingStore) MigrateGroupChatID(context.Context, string, string, string) error {

@@ -12,7 +12,7 @@ import (
 // mockPairingStore is a test implementation of store.PairingStore.
 type mockPairingStore struct {
 	pairedDevices map[string]map[string]bool // senderID -> channel -> paired
-	failIsPaired  bool                        // force IsPaired to return error
+	failIsPaired  bool                       // force IsPaired to return error
 }
 
 func newMockPairingStore() *mockPairingStore {
@@ -29,6 +29,13 @@ func (m *mockPairingStore) IsPaired(ctx context.Context, senderID, channel strin
 		return false, nil
 	}
 	return m.pairedDevices[senderID][channel], nil
+}
+func (m *mockPairingStore) GetPaired(ctx context.Context, senderID, channel string) (*store.PairedDeviceData, error) {
+	paired, err := m.IsPaired(ctx, senderID, channel)
+	if err != nil || !paired {
+		return nil, err
+	}
+	return &store.PairedDeviceData{SenderID: senderID, Channel: channel}, nil
 }
 
 func (m *mockPairingStore) RequestPairing(ctx context.Context, senderID, channel, chatID, accountID string, metadata map[string]string) (string, error) {
@@ -142,12 +149,12 @@ func TestCheckDMPolicy_PolicyAllowlist(t *testing.T) {
 // TestCheckDMPolicy_PolicyPairing checks pairing status.
 func TestCheckDMPolicy_PolicyPairing(t *testing.T) {
 	tests := []struct {
-		name              string
-		senderID          string
-		allowList         []string
-		paired            bool
-		failPairingCheck  bool
-		wantResult        PolicyResult
+		name             string
+		senderID         string
+		allowList        []string
+		paired           bool
+		failPairingCheck bool
+		wantResult       PolicyResult
 	}{
 		{
 			name:             "Paired sender is allowed",

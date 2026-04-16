@@ -31,6 +31,7 @@ type PairingStore interface {
 	DenyPairing(ctx context.Context, code string) error
 	RevokePairing(ctx context.Context, senderID, channel string) error
 	IsPaired(ctx context.Context, senderID, channel string) (bool, error)
+	GetPaired(ctx context.Context, senderID, channel string) (*PairedDeviceData, error)
 	ListPending(ctx context.Context) []PairingRequestData
 	ListPaired(ctx context.Context) []PairedDeviceData
 	// MigrateGroupChatID updates all references from oldChatID to newChatID

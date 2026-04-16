@@ -175,12 +175,7 @@ func (c *Channel) handleMessage(ev *slackevents.MessageEvent) {
 	if content == "" {
 		return
 	}
-
-	// Determine local_key and thread context
-	localKey := channelID
-	if threadTS != "" {
-		localKey = fmt.Sprintf("%s:thread:%s", channelID, threadTS)
-	}
+	localKey := slackLocalKey(channelID, threadTS)
 
 	// Mention gating in groups (with thread participation cache).
 	// For foreign bot messages we force strict mention gating: ignore the
@@ -241,6 +236,7 @@ func (c *Channel) handleMessage(ev *slackevents.MessageEvent) {
 	if !isDM && replyThreadTS == "" {
 		replyThreadTS = ev.TimeStamp // start thread from the triggering message
 	}
+	localKey = slackLocalKey(channelID, replyThreadTS)
 
 	placeholderOpts := []slackapi.MsgOption{
 		slackapi.MsgOptionText("Thinking...", false),
@@ -314,7 +310,7 @@ func (c *Channel) fetchThreadParentContext(ctx context.Context, channelID, threa
 		ChannelID: channelID,
 		Latest:    threadTS,
 		Limit:     1,
-		Inclusive:  true,
+		Inclusive: true,
 	}
 	history, err := c.api.GetConversationHistoryContext(ctx, params)
 	if err != nil || len(history.Messages) == 0 {

@@ -28,6 +28,7 @@ type RunContext struct {
 	CredentialUserID string // resolved tenant user for credential lookups (empty = use UserID)
 	AgentType        string
 	SenderID         string
+	ChannelName      string
 
 	// Flags
 	SelfEvolve          bool
@@ -35,6 +36,7 @@ type RunContext struct {
 	SharedKG            bool
 	SharedSessions      bool
 	RestrictToWorkspace bool
+	SuperUser           bool
 
 	// Tool configuration
 	BuiltinToolSettings map[string][]byte

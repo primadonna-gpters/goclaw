@@ -158,6 +158,35 @@ func (s *SQLitePairingStore) IsPaired(ctx context.Context, senderID, channel str
 	return count > 0, nil
 }
 
+func (s *SQLitePairingStore) GetPaired(ctx context.Context, senderID, channel string) (*store.PairedDeviceData, error) {
+	tid := tenantIDForInsert(ctx)
+	now := time.Now().Round(0)
+	row := s.db.QueryRowContext(ctx,
+		`SELECT sender_id, channel, chat_id, paired_by, paired_at, COALESCE(metadata, '{}')
+		 FROM paired_devices
+		 WHERE sender_id = ? AND channel = ? AND tenant_id = ?
+		   AND (expires_at IS NULL OR expires_at > ?)
+		 ORDER BY paired_at DESC
+		 LIMIT 1`,
+		senderID, channel, tid, now,
+	)
+
+	var out store.PairedDeviceData
+	var pairedAtStr string
+	var metaJSON []byte
+	if err := row.Scan(&out.SenderID, &out.Channel, &out.ChatID, &out.PairedBy, &pairedAtStr, &metaJSON); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get paired device: %w", err)
+	}
+	out.PairedAt = parseTimeToMillis(pairedAtStr)
+	if len(metaJSON) > 0 {
+		_ = json.Unmarshal(metaJSON, &out.Metadata)
+	}
+	return &out, nil
+}
+
 func (s *SQLitePairingStore) ListPending(ctx context.Context) []store.PairingRequestData {
 	tid := tenantIDForInsert(ctx)
 	now := time.Now().Round(0) // Strip monotonic clock for correct SQLite string comparison

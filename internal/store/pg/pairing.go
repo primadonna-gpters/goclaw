@@ -165,6 +165,38 @@ func (s *PGPairingStore) IsPaired(ctx context.Context, senderID, channel string)
 	return count > 0, nil
 }
 
+func (s *PGPairingStore) GetPaired(ctx context.Context, senderID, channel string) (*store.PairedDeviceData, error) {
+	tid := tenantIDForInsert(ctx)
+	var row pairedDeviceRow
+	err := pkgSqlxDB.GetContext(ctx, &row,
+		`SELECT sender_id, channel, chat_id, paired_by, paired_at, COALESCE(metadata, '{}') AS metadata
+		 FROM paired_devices
+		 WHERE sender_id = $1 AND channel = $2 AND tenant_id = $3
+		   AND (expires_at IS NULL OR expires_at > NOW())
+		 ORDER BY paired_at DESC
+		 LIMIT 1`,
+		senderID, channel, tid,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get paired device: %w", err)
+	}
+
+	out := &store.PairedDeviceData{
+		SenderID: row.SenderID,
+		Channel:  row.Channel,
+		ChatID:   row.ChatID,
+		PairedBy: row.PairedBy,
+		PairedAt: row.PairedAt.UnixMilli(),
+	}
+	if len(row.Metadata) > 0 {
+		_ = json.Unmarshal(row.Metadata, &out.Metadata)
+	}
+	return out, nil
+}
+
 // pairingRequestRow is an sqlx scan struct for pairing_requests.
 // Domain struct uses int64 (Unix ms) for timestamps, DB stores time.Time.
 type pairingRequestRow struct {

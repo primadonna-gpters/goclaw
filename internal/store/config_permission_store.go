@@ -21,7 +21,7 @@ const (
 type ConfigPermission struct {
 	ID         uuid.UUID       `json:"id" db:"id"`
 	AgentID    uuid.UUID       `json:"agentId" db:"agent_id"`
-	Scope      string          `json:"scope" db:"scope"`           // "agent" | "group:telegram:-100456" | "group:*" | "*"
+	Scope      string          `json:"scope" db:"scope"`            // "agent" | "group:telegram:-100456" | "group:*" | "*"
 	ConfigType string          `json:"configType" db:"config_type"` // "heartbeat" | "cron" | "context_files" | "file_writer" | "*"
 	UserID     string          `json:"userId" db:"user_id"`
 	Permission string          `json:"permission" db:"permission"` // "allow" | "deny"
@@ -62,6 +62,9 @@ type ConfigPermissionStore interface {
 // re-ingress turns carry the original user's sender.
 func CheckFileWriterPermission(ctx context.Context, permStore ConfigPermissionStore) error {
 	if permStore == nil {
+		return nil
+	}
+	if IsSuperUser(ctx) {
 		return nil
 	}
 	userID := UserIDFromContext(ctx)
@@ -124,6 +127,9 @@ func isSyntheticSender(senderID string) bool {
 // Same sender-policy as CheckFileWriterPermission (see that fn's docstring).
 func CheckCronPermission(ctx context.Context, permStore ConfigPermissionStore) error {
 	if permStore == nil {
+		return nil
+	}
+	if IsSuperUser(ctx) {
 		return nil
 	}
 	userID := UserIDFromContext(ctx)

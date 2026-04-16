@@ -60,6 +60,13 @@ func (l *Loop) buildMCPToolDescs(toolNames []string) map[string]string {
 // buildGroupWriterPrompt builds the system prompt section for group file writer restrictions.
 // For non-writers: injects refusal instructions + removes SOUL.md/AGENTS.md from context files.
 func (l *Loop) buildGroupWriterPrompt(ctx context.Context, groupID, senderID string, files []bootstrap.ContextFile) (string, []bootstrap.ContextFile) {
+	if store.IsSuperUser(ctx) {
+		var sb strings.Builder
+		sb.WriteString("## Group File Permissions\n\n")
+		sb.WriteString("Current sender has owner-approved superuser access for this paired channel.\n")
+		sb.WriteString("You may proceed with file and cron mutations as needed.\n")
+		return sb.String(), files
+	}
 	writers, err := l.configPermStore.ListFileWriters(ctx, l.agentUUID, groupID)
 	if err != nil {
 		return "", files // fail-open

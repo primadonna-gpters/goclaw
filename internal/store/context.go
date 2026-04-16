@@ -241,6 +241,22 @@ func ActorIDFromContext(ctx context.Context) string {
 	return SenderIDFromContext(ctx)
 }
 
+// ChannelNameFromContext extracts the channel instance name. Returns "" if not set.
+func ChannelNameFromContext(ctx context.Context) string {
+	if rc := RunContextFromCtx(ctx); rc != nil {
+		return rc.ChannelName
+	}
+	return ""
+}
+
+// IsSuperUser reports whether the current run has an owner-approved superuser override.
+func IsSuperUser(ctx context.Context) bool {
+	if rc := RunContextFromCtx(ctx); rc != nil {
+		return rc.SuperUser
+	}
+	return false
+}
+
 // WithSelfEvolve returns a new context with the self-evolve flag.
 func WithSelfEvolve(ctx context.Context, v bool) context.Context {
 	return context.WithValue(ctx, SelfEvolveKey, v)

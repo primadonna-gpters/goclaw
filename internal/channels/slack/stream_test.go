@@ -119,3 +119,24 @@ func TestExtractThreadTS(t *testing.T) {
 		})
 	}
 }
+
+func TestSlackLocalKey(t *testing.T) {
+	tests := []struct {
+		name      string
+		channelID string
+		threadTS  string
+		expected  string
+	}{
+		{name: "threaded", channelID: "C123", threadTS: "1776307238.269409", expected: "C123:thread:1776307238.269409"},
+		{name: "plain channel", channelID: "C123", threadTS: "", expected: "C123"},
+		{name: "empty channel", channelID: "", threadTS: "1776307238.269409", expected: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := slackLocalKey(tt.channelID, tt.threadTS); got != tt.expected {
+				t.Fatalf("slackLocalKey(%q, %q) = %q, want %q", tt.channelID, tt.threadTS, got, tt.expected)
+			}
+		})
+	}
+}

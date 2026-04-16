@@ -108,7 +108,7 @@ type Loop struct {
 	// Memory flush runs if callback != nil; auto-inject runs if AutoInjector != nil.
 	autoInjector memory.AutoInjector // v3 L0 memory auto-inject (nil = disabled)
 
-	eventPub        bus.EventPublisher // currently unused by Loop; kept for future use
+	eventPub        bus.EventPublisher      // currently unused by Loop; kept for future use
 	domainBus       eventbus.DomainEventBus // V3 domain event bus for consolidation pipeline
 	sessions        store.SessionStore
 	tools           tools.ToolExecutor
@@ -214,6 +214,7 @@ type Loop struct {
 
 	// Config permission store for group file writer checks
 	configPermStore store.ConfigPermissionStore
+	pairingStore    store.PairingStore
 
 	// Team store for cross-session pending task detection
 	teamStore store.TeamStore
@@ -239,8 +240,8 @@ type Loop struct {
 	memStore store.MemoryStore
 
 	// v3 orchestration mode (spawn/delegate/team) — controls tool visibility
-	orchMode          OrchestrationMode
-	delegateTargets   []DelegateTargetEntry // delegation targets for prompt injection
+	orchMode        OrchestrationMode
+	delegateTargets []DelegateTargetEntry // delegation targets for prompt injection
 
 	// v3 evolution metrics store (nil = disabled)
 	evolutionMetricsStore store.EvolutionMetricsStore
@@ -349,7 +350,7 @@ type LoopConfig struct {
 	AgentOtherConfig json.RawMessage  // raw other_config JSONB — copied defensively in NewLoop
 	AgentType        string           // "open" or "predefined"
 	DisplayName string    // human-readable agent display name (for runtime section)
-	IsTeamLead bool      // agent leads a team (from resolver detection)
+	IsTeamLead  bool      // agent leads a team (from resolver detection)
 
 	// Per-user profile + file seeding + dynamic context loading
 	EnsureUserProfile EnsureUserProfileFunc // preferred: separate profile + workspace
@@ -402,6 +403,7 @@ type LoopConfig struct {
 
 	// Config permission store for group file writer checks
 	ConfigPermStore store.ConfigPermissionStore
+	PairingStore    store.PairingStore
 
 	// Team store for cross-session pending task detection
 	TeamStore store.TeamStore
@@ -432,8 +434,8 @@ type LoopConfig struct {
 	MCPGrantChecker mcpbridge.GrantChecker  // runtime grant verification (nil = skip)
 
 	// V3 orchestration mode (resolved by resolver, controls tool visibility)
-	OrchMode          OrchestrationMode
-	DelegateTargets   []DelegateTargetEntry // delegation targets for prompt injection
+	OrchMode        OrchestrationMode
+	DelegateTargets []DelegateTargetEntry // delegation targets for prompt injection
 
 	// V3 evolution metrics store for recording tool/retrieval/feedback metrics
 	EvolutionMetricsStore store.EvolutionMetricsStore
@@ -542,6 +544,7 @@ func NewLoop(cfg LoopConfig) *Loop {
 		skillNudgeInterval:     cfg.SkillNudgeInterval,
 		isTeamLead:             cfg.IsTeamLead,
 		configPermStore:        cfg.ConfigPermStore,
+		pairingStore:           cfg.PairingStore,
 		teamStore:              cfg.TeamStore,
 		secureCLIStore:         cfg.SecureCLIStore,
 		onTextUploaded:         cfg.OnTextUploaded,
@@ -626,7 +629,7 @@ type RunRequest struct {
 // RunResult is the output of a completed agent run.
 type RunResult struct {
 	Content        string           `json:"content"`
-	Thinking       string           `json:"thinking,omitempty"`       // reasoning content from thinking models (Claude, o3, DeepSeek-R1, Kimi)
+	Thinking       string           `json:"thinking,omitempty"` // reasoning content from thinking models (Claude, o3, DeepSeek-R1, Kimi)
 	RunID          string           `json:"runId"`
 	Iterations     int              `json:"iterations"`
 	Usage          *providers.Usage `json:"usage,omitempty"`

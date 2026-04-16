@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/google/uuid"
@@ -312,6 +313,16 @@ func (l *Loop) injectContext(ctx context.Context, req *RunRequest) (contextSetup
 	}
 	// Extract resolved credential user ID (set earlier via WithCredentialUserID, empty if not resolved).
 	credUserID, _ := ctx.Value(store.CredentialUserIDKey).(string)
+	superUser := false
+	if l.pairingStore != nil && req.SenderID != "" && req.Channel != "" {
+		numericID := req.SenderID
+		if idx := strings.IndexByte(numericID, '|'); idx > 0 {
+			numericID = numericID[:idx]
+		}
+		if paired, err := l.pairingStore.GetPaired(ctx, numericID, req.Channel); err == nil && paired != nil {
+			superUser = slices.Contains(l.ownerIDs, paired.PairedBy)
+		}
+	}
 	rc := &store.RunContext{
 		AgentID:             l.agentUUID,
 		AgentKey:            l.id,
@@ -320,11 +331,13 @@ func (l *Loop) injectContext(ctx context.Context, req *RunRequest) (contextSetup
 		CredentialUserID:    credUserID,
 		AgentType:           l.agentType,
 		SenderID:            req.SenderID,
+		ChannelName:         req.Channel,
 		SelfEvolve:          l.selfEvolve,
 		SharedMemory:        store.IsSharedMemory(ctx),
 		SharedKG:            store.IsSharedKG(ctx),
 		SharedSessions:      store.IsSharedSessions(ctx),
 		RestrictToWorkspace: l.restrictToWs != nil && *l.restrictToWs,
+		SuperUser:           superUser,
 		BuiltinToolSettings: l.builtinToolSettings,
 		ChannelType:         req.ChannelType,
 		SubagentsCfg:        l.subagentsCfg,

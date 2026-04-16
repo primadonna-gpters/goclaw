@@ -52,11 +52,7 @@ func (c *Channel) handleAppMention(ev *slackevents.AppMentionEvent) {
 		return
 	}
 
-	localKey := channelID
 	threadTS := ev.ThreadTimeStamp
-	if threadTS != "" {
-		localKey = fmt.Sprintf("%s:thread:%s", channelID, threadTS)
-	}
 
 	slog.Debug("slack app_mention received",
 		"sender_id", senderID, "channel_id", channelID,
@@ -66,6 +62,7 @@ func (c *Channel) handleAppMention(ev *slackevents.AppMentionEvent) {
 	if replyThreadTS == "" {
 		replyThreadTS = ev.TimeStamp
 	}
+	localKey := slackLocalKey(channelID, replyThreadTS)
 
 	placeholderOpts := []slackapi.MsgOption{
 		slackapi.MsgOptionText("Thinking...", false),

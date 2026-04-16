@@ -129,3 +129,10 @@ func extractThreadTS(localKey string) string {
 	}
 	return ""
 }
+
+func slackLocalKey(channelID, threadTS string) string {
+	if channelID == "" || threadTS == "" {
+		return channelID
+	}
+	return channelID + ":thread:" + threadTS
+}
