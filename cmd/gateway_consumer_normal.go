@@ -242,6 +242,7 @@ func processNormalMessage(
 		extraPrompt = "You are in a GROUP chat (multiple participants), not a private 1-on-1 DM.\n" +
 			"- Messages may include a [Chat messages since your last reply] section with recent group history. Each history line shows \"sender [time]: message\".\n" +
 			"- The current message includes a [From: sender_name] tag identifying who @mentioned you.\n" +
+			"- IMPORTANT: Always address your reply to the person in the [From: ...] tag. That is who sent the current message. Do not confuse them with other participants in the thread.\n" +
 			"- Keep responses concise and focused; long replies are disruptive in groups.\n" +
 			"- Write like a human. Avoid Markdown tables. Use real line breaks sparingly.\n" +
 			"- Address the group naturally. If the history shows a multi-person conversation, consider the full context before answering."
