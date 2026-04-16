@@ -64,8 +64,9 @@ type Server struct {
 	db             interface{ PingContext(context.Context) error } // for health check DB ping
 	updateChecker  *UpdateChecker
 
-	logTee   *LogTee                  // optional; auto-unsubscribes clients on disconnect
-	postTurn tools.PostTurnProcessor // optional; for team task dispatch in HTTP API paths
+	logTee      *LogTee                  // optional; auto-unsubscribes clients on disconnect
+	postTurn    tools.PostTurnProcessor // optional; for team task dispatch in HTTP API paths
+	pixelOffice routeRegistrar          // optional; pixel office visualization
 
 	httpServer *http.Server
 	mux        *http.ServeMux
@@ -195,6 +196,11 @@ func (s *Server) BuildMux() *http.ServeMux {
 				_, _ = w.Write([]byte(`{"error":"mcp bridge disabled: set GOCLAW_GATEWAY_TOKEN to enable"}`))
 			})
 		}
+	}
+
+	// Pixel office visualization — register before webui catch-all.
+	if s.pixelOffice != nil {
+		s.pixelOffice.RegisterRoutes(mux)
 	}
 
 	// Embedded web UI (built with -tags embedui). Catch-all after all API routes.
@@ -571,7 +577,8 @@ func (s *Server) SetDocsHandler(h *httpapi.DocsHandler) { s.handlers = append(s.
 func (s *Server) SetEditionHandler(h *httpapi.EditionHandler) { s.handlers = append(s.handlers, h) }
 
 // SetPixelOfficeHandler sets the pixel office visualization handler.
-func (s *Server) SetPixelOfficeHandler(h routeRegistrar) { s.handlers = append(s.handlers, h) }
+// Stored separately from handlers[] to ensure it registers before the webui catch-all.
+func (s *Server) SetPixelOfficeHandler(h routeRegistrar) { s.pixelOffice = h }
 
 // SetAgentStore sets the agent store for context injection in tools_invoke.
 func (s *Server) SetAgentStore(as store.AgentStore) { s.agentStore = as }
