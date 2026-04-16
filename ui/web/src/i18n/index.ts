@@ -119,6 +119,9 @@ import koPackages from "./locales/ko/packages.json";
 import koTenants from "./locales/ko/tenants.json";
 import koSystemSettings from "./locales/ko/system-settings.json";
 import koImportExport from "./locales/ko/import-export.json";
+import koVault from "./locales/ko/vault.json";
+import koV3Capabilities from "./locales/ko/v3-capabilities.json";
+import koBackup from "./locales/ko/backup.json";
 
 // --- ZH namespaces ---
 import zhCommon from "./locales/zh/common.json";
@@ -221,6 +224,9 @@ i18n.use(initReactI18next).init({
       tenants: koTenants,
       "system-settings": koSystemSettings,
       "import-export": koImportExport,
+      vault: koVault,
+      "v3-capabilities": koV3Capabilities,
+      backup: koBackup,
     },
     vi: {
       common: viCommon, sidebar: viSidebar, topbar: viTopbar, login: viLogin,

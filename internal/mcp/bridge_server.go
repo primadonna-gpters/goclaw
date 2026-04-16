@@ -33,7 +33,12 @@ var BridgeToolNames = map[string]bool{
 	"skill_search":  true,
 	// Media
 	"read_image":   true,
-	"create_image": true,
+	"create_image":  true,
+	"create_video":  true,
+	"create_audio":  true,
+	"read_video":    true,
+	"read_audio":    true,
+	"read_document": true,
 	"tts":          true,
 	// Browser automation
 	"browser": true,
