@@ -6,17 +6,22 @@ import "encoding/json"
 
 // OpenClawConfig is the top-level parsed representation of openclaw.json.
 type OpenClawConfig struct {
-	Agents      []AgentEntry
-	Defaults    AgentDefaults
-	Channels    []ChannelConfig
-	MCPServers  []MCPServerEntry
-	GatewayPort int
+	Agents         []AgentEntry
+	Defaults       AgentDefaults
+	Channels       []ChannelConfig
+	MCPServers     []MCPServerEntry
+	SkillExtraDirs []string // skills.load.extraDirs — shared skill directories
+	GatewayPort    int
 }
 
 // AgentEntry represents a single agent defined in the "agents.list" array.
 type AgentEntry struct {
 	ID              string
+	Name            string
 	MentionPatterns []string
+	IsDefault       bool   // agent-level "default": true flag (implies default slack account)
+	SlackAccount    string // explicit channel binding, when agent.channels.slack.account is set
+	Disabled        bool   // agent-level "disabled": true flag
 }
 
 // AgentDefaults holds the values from "agents.defaults".
@@ -29,12 +34,15 @@ type AgentDefaults struct {
 }
 
 // ChannelConfig represents a single channel connection.
-// Slack channels that are per-agent (from "accounts") carry the agent ID in AgentID.
-// The default Slack channel has AgentID="".
+// For slack, each entry in "slack.accounts" becomes one ChannelConfig with its
+// account name preserved in AccountName. AgentID is resolved later by the
+// import handler using a matching rule (default/name/explicit binding).
 type ChannelConfig struct {
 	Type           string
 	Enabled        bool
-	AgentID        string
+	AgentID        string // resolved agent binding (set by import handler, not parser)
+	AccountName    string // slack account key ("default", "personal", "bbojjak", ...)
+	DisplayName    string // human-readable name (from slack account.name or similar)
 	SlackBotToken  string
 	SlackAppToken  string
 	TelegramToken  string
@@ -60,6 +68,13 @@ type rawConfig struct {
 	Channels rawChannels        `json:"channels"`
 	MCP      rawMCP             `json:"mcp"`
 	Gateway  rawGateway         `json:"gateway"`
+	Skills   rawSkills          `json:"skills"`
+}
+
+type rawSkills struct {
+	Load struct {
+		ExtraDirs []string `json:"extraDirs"`
+	} `json:"load"`
 }
 
 type rawAgents struct {
@@ -85,9 +100,17 @@ type rawDefaults struct {
 
 type rawAgent struct {
 	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Default   bool   `json:"default"`
+	Disabled  bool   `json:"disabled"`
 	GroupChat struct {
 		MentionPatterns []string `json:"mentionPatterns"`
 	} `json:"groupChat"`
+	Channels struct {
+		Slack struct {
+			Account string `json:"account"`
+		} `json:"slack"`
+	} `json:"channels"`
 }
 
 type rawChannels struct {
@@ -107,8 +130,13 @@ type rawSlack struct {
 }
 
 type rawSlackAccount struct {
-	BotToken string `json:"botToken"`
-	AppToken string `json:"appToken"`
+	Name     string   `json:"name"`
+	BotToken string   `json:"botToken"`
+	AppToken string   `json:"appToken"`
+	Enabled  *bool    `json:"enabled"` // optional; nil means inherit top-level
+	GroupPolicy string `json:"groupPolicy"`
+	DMPolicy    string `json:"dmPolicy"`
+	AllowFrom   []string `json:"allowFrom"`
 }
 
 type rawTelegram struct {
@@ -154,37 +182,63 @@ func ParseConfig(data []byte) (*OpenClawConfig, error) {
 	for _, a := range raw.Agents.List {
 		cfg.Agents = append(cfg.Agents, AgentEntry{
 			ID:              a.ID,
+			Name:            a.Name,
 			MentionPatterns: a.GroupChat.MentionPatterns,
+			IsDefault:       a.Default,
+			SlackAccount:    a.Channels.Slack.Account,
+			Disabled:        a.Disabled,
 		})
 	}
 
 	// --- channels: slack ---
+	// OpenClaw stores per-account credentials under slack.accounts.<name>.
+	// Top-level slack.botToken/appToken is rarely used (legacy). We surface
+	// every account as its own ChannelConfig so the import handler can match
+	// accounts to agents using default/name/explicit-binding rules.
 	if s := raw.Channels.Slack; s != nil {
-		// default slack channel (no per-agent override)
-		cfg.Channels = append(cfg.Channels, ChannelConfig{
-			Type:           "slack",
-			Enabled:        s.Enabled,
-			AgentID:        "",
-			SlackBotToken:  s.BotToken,
-			SlackAppToken:  s.AppToken,
-			RequireMention: s.RequireMention,
-			GroupPolicy:    s.GroupPolicy,
-			DMPolicy:       s.DMPolicy,
-			AllowFrom:      s.AllowFrom,
-		})
-
-		// per-agent slack channels
-		for agentID, acct := range s.Accounts {
+		// Legacy top-level slack credentials (only if actually present)
+		if s.BotToken != "" {
 			cfg.Channels = append(cfg.Channels, ChannelConfig{
 				Type:           "slack",
 				Enabled:        s.Enabled,
-				AgentID:        agentID,
-				SlackBotToken:  acct.BotToken,
-				SlackAppToken:  acct.AppToken,
+				AccountName:    "",
+				SlackBotToken:  s.BotToken,
+				SlackAppToken:  s.AppToken,
 				RequireMention: s.RequireMention,
 				GroupPolicy:    s.GroupPolicy,
 				DMPolicy:       s.DMPolicy,
 				AllowFrom:      s.AllowFrom,
+			})
+		}
+
+		for accountName, acct := range s.Accounts {
+			enabled := s.Enabled
+			if acct.Enabled != nil {
+				enabled = *acct.Enabled
+			}
+			groupPolicy := acct.GroupPolicy
+			if groupPolicy == "" {
+				groupPolicy = s.GroupPolicy
+			}
+			dmPolicy := acct.DMPolicy
+			if dmPolicy == "" {
+				dmPolicy = s.DMPolicy
+			}
+			allowFrom := acct.AllowFrom
+			if len(allowFrom) == 0 {
+				allowFrom = s.AllowFrom
+			}
+			cfg.Channels = append(cfg.Channels, ChannelConfig{
+				Type:           "slack",
+				Enabled:        enabled,
+				AccountName:    accountName,
+				DisplayName:    acct.Name,
+				SlackBotToken:  acct.BotToken,
+				SlackAppToken:  acct.AppToken,
+				RequireMention: s.RequireMention,
+				GroupPolicy:    groupPolicy,
+				DMPolicy:       dmPolicy,
+				AllowFrom:      allowFrom,
 			})
 		}
 	}
@@ -216,5 +270,49 @@ func ParseConfig(data []byte) (*OpenClawConfig, error) {
 	// --- gateway ---
 	cfg.GatewayPort = raw.Gateway.Port
 
+	// --- skills ---
+	cfg.SkillExtraDirs = raw.Skills.Load.ExtraDirs
+
 	return cfg, nil
+}
+
+// MergeMCPJSON parses a Claude CLI standard .mcp.json file and merges the
+// discovered servers into the config (duplicates by name are skipped).
+func MergeMCPJSON(cfg *OpenClawConfig, data []byte) error {
+	if cfg == nil || len(data) == 0 {
+		return nil
+	}
+	var parsed struct {
+		MCPServers map[string]struct {
+			Command   string            `json:"command"`
+			Args      []string          `json:"args"`
+			Env       map[string]string `json:"env"`
+			Transport string            `json:"transport"`
+			URL       string            `json:"url"`
+		} `json:"mcpServers"`
+	}
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		return err
+	}
+	existing := make(map[string]bool, len(cfg.MCPServers))
+	for _, s := range cfg.MCPServers {
+		existing[s.Name] = true
+	}
+	for name, srv := range parsed.MCPServers {
+		if existing[name] {
+			continue
+		}
+		transport := srv.Transport
+		if transport == "" {
+			transport = "stdio"
+		}
+		cfg.MCPServers = append(cfg.MCPServers, MCPServerEntry{
+			Name:      name,
+			Command:   srv.Command,
+			Args:      srv.Args,
+			Env:       srv.Env,
+			Transport: transport,
+		})
+	}
+	return nil
 }

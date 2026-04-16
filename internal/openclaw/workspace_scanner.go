@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -18,7 +19,16 @@ type WorkspaceScanResult struct {
 	Skills         []SkillEntry
 	EnvVars        map[string]string
 	WorkspaceFiles map[string][]byte
+	LargeDirs      []LargeDirInfo
 	Warnings       []string
+}
+
+// LargeDirInfo describes a workspace directory that is too large for inline migration.
+type LargeDirInfo struct {
+	Name     string // directory name (e.g. "operations")
+	Path     string // full path on disk
+	SizeBytes int64
+	SizeHuman string // e.g. "8.7 GB"
 }
 
 // BootstrapFile is a top-level markdown file that seeds an agent's context.
@@ -234,9 +244,19 @@ func lstatWalk(dir string, fn func(path string, isSymlink bool)) error {
 	return nil
 }
 
+// ScanSkillsDir scans a skills directory and appends found skills to the result.
+// This is exported so the HTTP handler can scan additional skill directories
+// (e.g., shared workspaces like bbopters-shared/skills/).
+func ScanSkillsDir(skillsDir string, result *WorkspaceScanResult) error {
+	return scanSkillsFromDir(skillsDir, result)
+}
+
 // scanSkills looks for subdirectories inside skills/ that contain a SKILL.md.
 func scanSkills(wsPath string, result *WorkspaceScanResult) error {
-	skillsDir := filepath.Join(wsPath, "skills")
+	return scanSkillsFromDir(filepath.Join(wsPath, "skills"), result)
+}
+
+func scanSkillsFromDir(skillsDir string, result *WorkspaceScanResult) error {
 	entries, err := os.ReadDir(skillsDir)
 	if os.IsNotExist(err) {
 		return nil
@@ -245,9 +265,18 @@ func scanSkills(wsPath string, result *WorkspaceScanResult) error {
 		return err
 	}
 
+	// Track existing slugs to avoid duplicates
+	existing := make(map[string]bool, len(result.Skills))
+	for _, s := range result.Skills {
+		existing[s.Slug] = true
+	}
+
 	for _, e := range entries {
 		if !e.IsDir() {
 			continue
+		}
+		if existing[e.Name()] {
+			continue // already scanned from workspace
 		}
 		skillFile := filepath.Join(skillsDir, e.Name(), "SKILL.md")
 		content, err := os.ReadFile(skillFile)
@@ -385,14 +414,60 @@ func scanScripts(wsPath string, result *WorkspaceScanResult) error {
 	})
 }
 
-// scanLargeDirWarnings warns about directories that won't be auto-migrated.
+// scanLargeDirWarnings detects large workspace directories and records their sizes.
 func scanLargeDirWarnings(wsPath string, result *WorkspaceScanResult) {
 	for _, dir := range largeDirWarnings {
 		fullPath := filepath.Join(wsPath, dir)
-		if info, err := os.Lstat(fullPath); err == nil && info.IsDir() {
-			result.Warnings = append(result.Warnings,
-				"large directory '"+dir+"/' detected: will not be auto-migrated")
+		info, err := os.Lstat(fullPath)
+		if err != nil || !info.IsDir() {
+			continue
 		}
+		size := dirSize(fullPath)
+		h := humanSize(size)
+		result.LargeDirs = append(result.LargeDirs, LargeDirInfo{
+			Name:      dir,
+			Path:      fullPath,
+			SizeBytes: size,
+			SizeHuman: h,
+		})
+		result.Warnings = append(result.Warnings,
+			fmt.Sprintf("large directory '%s/' detected (%s): use symlink or copy mode", dir, h))
+	}
+}
+
+// dirSize returns the total size of all files in a directory tree.
+func dirSize(path string) int64 {
+	var total int64
+	filepath.WalkDir(path, func(_ string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+		if info, e := d.Info(); e == nil {
+			total += info.Size()
+		}
+		return nil
+	})
+	return total
+}
+
+// humanSize formats bytes into a human-readable string.
+func humanSize(b int64) string {
+	const (
+		kb = 1024
+		mb = kb * 1024
+		gb = mb * 1024
+	)
+	switch {
+	case b >= gb:
+		return strings.TrimRight(strings.TrimRight(
+			strings.Replace(fmt.Sprintf("%.1f", float64(b)/float64(gb)), ".0", "", 1),
+			"0"), ".") + " GB"
+	case b >= mb:
+		return fmt.Sprintf("%d MB", b/mb)
+	case b >= kb:
+		return fmt.Sprintf("%d KB", b/kb)
+	default:
+		return fmt.Sprintf("%d B", b)
 	}
 }
 

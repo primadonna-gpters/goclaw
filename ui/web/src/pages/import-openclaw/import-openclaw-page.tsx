@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { AlertTriangle, CheckCircle, XCircle, ChevronRight } from "lucide-react";
+import { AlertTriangle, CheckCircle, XCircle, ChevronRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,54 +24,165 @@ const ENV_CATEGORY_LABELS: Record<string, string> = {
   unknown: "Unknown",
 };
 
+interface AgentSelection {
+  bootstrapFiles: Set<string>;
+  skills: Set<string>;
+  cronJobs: Set<string>;
+}
+
 function AgentCard({
   agent,
   selected,
   onToggle,
+  selection,
+  onSelectionChange,
 }: {
   agent: AgentPreview;
   selected: boolean;
   onToggle: () => void;
+  selection: AgentSelection;
+  onSelectionChange: (sel: AgentSelection) => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
+
+  // Defensive: ensure Set fields are always valid Sets (sel may be undefined or partial)
+  const sel = selection;
+  const safeSelection: AgentSelection = {
+    bootstrapFiles: sel?.bootstrapFiles instanceof Set ? sel.bootstrapFiles : new Set<string>(),
+    skills: sel?.skills instanceof Set ? sel.skills : new Set<string>(),
+    cronJobs: sel?.cronJobs instanceof Set ? sel.cronJobs : new Set<string>(),
+  };
+
+  const toggleItem = (set: Set<string>, key: string): Set<string> => {
+    const next = new Set(set);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    return next;
+  };
+
   return (
     <div
-      className={`rounded-md border p-3 cursor-pointer transition-colors ${
+      className={`rounded-md border transition-colors ${
         selected ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/50"
       }`}
-      onClick={onToggle}
     >
-      <div className="flex items-start gap-3">
-        <input
-          type="checkbox"
-          checked={selected}
-          onChange={onToggle}
-          onClick={(e) => e.stopPropagation()}
-          className="mt-0.5 h-4 w-4 accent-primary"
-        />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{agent.id}</p>
-          <p className="text-xs text-muted-foreground truncate">{agent.workspace_path}</p>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            <Badge variant="secondary" className="text-xs">
-              {agent.bootstrap_files} bootstrap files
-            </Badge>
-            <Badge variant="secondary" className="text-xs">
-              {agent.memory_docs} memory docs
-            </Badge>
-            <Badge variant="secondary" className="text-xs">
-              {agent.skills} skills
-            </Badge>
-            <Badge variant="secondary" className="text-xs">
-              {agent.cron_jobs} cron jobs
-            </Badge>
-            {agent.has_env && (
-              <Badge variant="outline" className="text-xs">
-                has .env
+      <div className="p-3 cursor-pointer" onClick={onToggle}>
+        <div className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={onToggle}
+            onClick={(e) => e.stopPropagation()}
+            className="mt-0.5 h-4 w-4 accent-primary"
+          />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{agent.id}</p>
+            <p className="text-xs text-muted-foreground truncate">{agent.workspace_path}</p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              <Badge variant="secondary" className="text-xs">
+                {safeSelection.bootstrapFiles.size}/{agent.bootstrap_files} files
               </Badge>
-            )}
+              <Badge variant="secondary" className="text-xs">
+                {agent.memory_docs} memory docs
+              </Badge>
+              <Badge variant="secondary" className="text-xs">
+                {safeSelection.skills.size}/{agent.skills} skills
+              </Badge>
+              <Badge variant="secondary" className="text-xs">
+                {safeSelection.cronJobs.size}/{agent.cron_jobs} cron jobs
+              </Badge>
+              {agent.has_env && (
+                <Badge variant="outline" className="text-xs">has .env</Badge>
+              )}
+            </div>
           </div>
+          {selected && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+              className="p-1 text-muted-foreground hover:text-foreground"
+            >
+              {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </button>
+          )}
         </div>
       </div>
+
+      {selected && expanded && (
+        <div className="border-t px-3 py-2 space-y-3 text-xs">
+          {/* Bootstrap Files */}
+          {(agent.bootstrap_file_names?.length ?? 0) > 0 && (
+            <div>
+              <p className="font-medium mb-1 text-muted-foreground">Bootstrap Files</p>
+              <div className="flex flex-wrap gap-x-4 gap-y-1">
+                {agent.bootstrap_file_names?.map((name) => (
+                  <label key={name} className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={safeSelection.bootstrapFiles.has(name)}
+                      onChange={() => onSelectionChange({
+                        ...safeSelection,
+                        bootstrapFiles: toggleItem(safeSelection.bootstrapFiles, name),
+                      })}
+                      className="h-3 w-3 accent-primary"
+                    />
+                    <span className="font-mono">{name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Skills */}
+          {(agent.skill_list?.length ?? 0) > 0 && (
+            <div>
+              <p className="font-medium mb-1 text-muted-foreground">Skills</p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                {agent.skill_list?.map((sk) => (
+                  <label key={sk.slug} className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={safeSelection.skills.has(sk.slug)}
+                      onChange={() => onSelectionChange({
+                        ...safeSelection,
+                        skills: toggleItem(safeSelection.skills, sk.slug),
+                      })}
+                      className="h-3 w-3 accent-primary"
+                    />
+                    <span className="truncate">{sk.name || sk.slug}</span>
+                    {sk.source === "shared" && (
+                      <Badge variant="outline" className="text-[10px] px-1 py-0">shared</Badge>
+                    )}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Cron Jobs */}
+          {(agent.cron_job_names?.length ?? 0) > 0 && (
+            <div>
+              <p className="font-medium mb-1 text-muted-foreground">Cron Jobs</p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                {agent.cron_job_names?.map((name) => (
+                  <label key={name} className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={safeSelection.cronJobs.has(name)}
+                      onChange={() => onSelectionChange({
+                        ...safeSelection,
+                        cronJobs: toggleItem(safeSelection.cronJobs, name),
+                      })}
+                      className="h-3 w-3 accent-primary"
+                    />
+                    <span className="font-mono truncate">{name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -145,7 +256,9 @@ export function ImportOpenClawPage() {
   const [scanError, setScanError] = useState("");
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [selectedAgents, setSelectedAgents] = useState<Set<string>>(new Set());
+  const [agentSelections, setAgentSelections] = useState<Record<string, AgentSelection>>({});
   const [includeCredentials, setIncludeCredentials] = useState(true);
+  const [workspaceMode, setWorkspaceMode] = useState<"symlink" | "copy">("symlink");
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState("");
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
@@ -157,6 +270,16 @@ export function ImportOpenClawPage() {
       const result = await scanOpenClaw({ path: sourcePath });
       setScanResult(result);
       setSelectedAgents(new Set(result.agents.map((a) => a.id)));
+      // Initialize per-agent selections with everything selected by default
+      const sels: Record<string, AgentSelection> = {};
+      for (const a of result.agents) {
+        sels[a.id] = {
+          bootstrapFiles: new Set(a.bootstrap_file_names ?? []),
+          skills: new Set((a.skill_list ?? []).map((s) => s.slug)),
+          cronJobs: new Set(a.cron_job_names ?? []),
+        };
+      }
+      setAgentSelections(sels);
       setStep("preview");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Scan failed";
@@ -180,10 +303,26 @@ export function ImportOpenClawPage() {
     setImportError("");
     setImporting(true);
     try {
+      // Build agent_selections from Sets for only the selected agents
+      const selections: Record<
+        string,
+        { bootstrap_files: string[]; skills: string[]; cron_jobs: string[] }
+      > = {};
+      for (const id of selectedAgents) {
+        const sel = agentSelections[id];
+        if (!sel) continue;
+        selections[id] = {
+          bootstrap_files: Array.from(sel.bootstrapFiles),
+          skills: Array.from(sel.skills),
+          cron_jobs: Array.from(sel.cronJobs),
+        };
+      }
       const result = await importOpenClaw({
         path: sourcePath,
         selected_agents: Array.from(selectedAgents),
         include_credentials: includeCredentials,
+        workspace_mode: workspaceMode,
+        agent_selections: selections,
       });
       setImportResult(result);
       setStep("results");
@@ -272,20 +411,28 @@ export function ImportOpenClawPage() {
         {/* Step 2: Preview & selection */}
         {step === "preview" && scanResult && (
           <div className="space-y-6">
-            {/* Warnings */}
-            {scanResult.warnings.length > 0 && (
-              <div className="flex items-start gap-2.5 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                <div className="space-y-1">
-                  <p className="font-medium">Warnings</p>
-                  <ul className="list-disc pl-4 space-y-0.5">
-                    {scanResult.warnings.map((w, i) => (
-                      <li key={i}>{w}</li>
-                    ))}
-                  </ul>
+            {/* Warnings — only show for selected agents + non-agent warnings */}
+            {(() => {
+              const filtered = scanResult.warnings.filter((w) => {
+                const match = w.match(/^\[([^\]]+)\]/);
+                if (!match || !match[1]) return true;
+                return selectedAgents.has(match[1]);
+              });
+              if (filtered.length === 0) return null;
+              return (
+                <div className="flex items-start gap-2.5 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <div className="space-y-1">
+                    <p className="font-medium">Warnings</p>
+                    <ul className="list-disc pl-4 space-y-0.5">
+                      {filtered.map((w, i) => (
+                        <li key={i}>{w}</li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Agents */}
             <div className="space-y-3">
@@ -313,14 +460,25 @@ export function ImportOpenClawPage() {
                 <p className="text-sm text-muted-foreground">No agents found.</p>
               ) : (
                 <div className="space-y-2">
-                  {scanResult.agents.map((agent) => (
-                    <AgentCard
-                      key={agent.id}
-                      agent={agent}
-                      selected={selectedAgents.has(agent.id)}
-                      onToggle={() => toggleAgent(agent.id)}
-                    />
-                  ))}
+                  {scanResult.agents.map((agent) => {
+                    const sel = agentSelections[agent.id] ?? {
+                      bootstrapFiles: new Set<string>(),
+                      skills: new Set<string>(),
+                      cronJobs: new Set<string>(),
+                    };
+                    return (
+                      <AgentCard
+                        key={agent.id}
+                        agent={agent}
+                        selected={selectedAgents.has(agent.id)}
+                        onToggle={() => toggleAgent(agent.id)}
+                        selection={sel}
+                        onSelectionChange={(newSel) =>
+                          setAgentSelections((prev) => ({ ...prev, [agent.id]: newSel }))
+                        }
+                      />
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -359,9 +517,9 @@ export function ImportOpenClawPage() {
                         <Badge variant="outline" className="text-xs">{mcp.transport}</Badge>
                       </div>
                       <p className="text-xs text-muted-foreground font-mono truncate">{mcp.command}</p>
-                      {mcp.env_keys.length > 0 && (
+                      {(mcp.env_keys?.length ?? 0) > 0 && (
                         <p className="text-xs text-muted-foreground">
-                          env: {mcp.env_keys.join(", ")}
+                          env: {mcp.env_keys?.join(", ")}
                         </p>
                       )}
                     </div>
@@ -396,6 +554,43 @@ export function ImportOpenClawPage() {
                   checked={includeCredentials}
                   onCheckedChange={setIncludeCredentials}
                 />
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-border">
+                <p className="text-sm font-medium">Large directory handling</p>
+                <p className="text-xs text-muted-foreground">
+                  How to handle large workspace directories (operations, archives, assets, etc.)
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className={`flex-1 rounded-md border px-3 py-2 text-left text-sm transition-colors ${
+                      workspaceMode === "symlink"
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-muted-foreground/50"
+                    }`}
+                    onClick={() => setWorkspaceMode("symlink")}
+                  >
+                    <span className="font-medium">Symlink</span>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Saves disk space. OpenClaw directory must be kept.
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    className={`flex-1 rounded-md border px-3 py-2 text-left text-sm transition-colors ${
+                      workspaceMode === "copy"
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-muted-foreground/50"
+                    }`}
+                    onClick={() => setWorkspaceMode("copy")}
+                  >
+                    <span className="font-medium">Copy</span>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Independent. OpenClaw can be fully removed after.
+                    </p>
+                  </button>
+                </div>
               </div>
             </div>
 
