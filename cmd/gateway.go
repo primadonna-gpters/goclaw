@@ -376,6 +376,22 @@ func runGateway() {
 		mediaStore,
 	)
 
+	// Pixel office: seed known agents from DB so they appear on first load.
+	if pixelCollector != nil && pgStores.Agents != nil {
+		if agents, err := pgStores.Agents.List(context.Background(), ""); err == nil {
+			for _, a := range agents {
+				if a.Status == "active" {
+					name := a.DisplayName
+					if name == "" {
+						name = a.AgentKey
+					}
+					pixelCollector.SeedAgent(a.AgentKey, name)
+				}
+			}
+			slog.Info("pixel-office: seeded agents from DB", "count", len(agents))
+		}
+	}
+
 	// Pixel office visualization handler.
 	server.SetPixelOfficeHandler(pixeloffice.NewHandler(pixelCollector, pixelofficeui.Assets()))
 

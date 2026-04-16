@@ -69,6 +69,22 @@ func NewCollector() *Collector {
 	}
 }
 
+// SeedAgent registers a known agent with idle status so it appears in the office
+// even before any events arrive. Skips if the agent already exists.
+func (c *Collector) SeedAgent(id, displayName string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if _, exists := c.agents[id]; exists {
+		return
+	}
+	c.agents[id] = &AgentState{
+		ID:     id,
+		Name:   displayName,
+		Status: StatusIdle,
+		Sprite: id,
+	}
+}
+
 // HandleEvent processes an agent lifecycle event and updates the pixel office state.
 func (c *Collector) HandleEvent(ev agent.AgentEvent) {
 	c.mu.Lock()
