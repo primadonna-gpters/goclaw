@@ -60,10 +60,10 @@ func (c *Channel) Send(_ context.Context, msg bus.OutboundMessage) error {
 
 		editContent, remaining := splitAtLimit(content, maxMessageLen)
 
+		// Do NOT pass MsgOptionTS to UpdateMessage — Slack's chat.update API
+		// interprets thread_ts as a broadcast flag and duplicates the message
+		// at the channel level. Thread context is already encoded in `ts` itself.
 		opts := []slackapi.MsgOption{slackapi.MsgOptionText(editContent, false)}
-		if threadTS != "" {
-			opts = append(opts, slackapi.MsgOptionTS(threadTS))
-		}
 
 		if _, _, _, editErr := c.api.UpdateMessage(channelID, ts, opts...); editErr == nil {
 			if remaining != "" {
