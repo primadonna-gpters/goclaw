@@ -1,10 +1,11 @@
 import type { TileMap } from './office';
 import type { Character } from './characters';
-import { getBreathOffset, isStretching, getStretchProgress } from './characters';
+import { getBreathOffset, isStretching, getStretchProgress, isAtCoffeeMachine } from './characters';
 import {
   TILE_SIZE, OFFICE_COLS, OFFICE_ROWS,
   WALL, WINDOW, PLANT, WATER_COOLER, BOOKSHELF, RUG,
   WHITEBOARD, CLOCK, COAT_RACK, COFFEE_TABLE, BASEBOARD, LIGHT_RAY,
+  COFFEE_MACHINE, SOFA, PRINTER, POTTED_TREE, TRASH_CAN, FILING_CABINET,
 } from './office';
 import { getSheet } from '../sprites/loader';
 
@@ -123,6 +124,30 @@ export class Renderer {
           case LIGHT_RAY:
             this.drawFloor(ctx, x, y, c, r);
             this.drawLightRay(ctx, x, y, r);
+            break;
+          case COFFEE_MACHINE:
+            this.drawFloor(ctx, x, y, c, r);
+            this.drawCoffeeMachine(ctx, x, y);
+            break;
+          case SOFA:
+            this.drawFloor(ctx, x, y, c, r);
+            this.drawSofa(ctx, x, y, c);
+            break;
+          case PRINTER:
+            this.drawFloor(ctx, x, y, c, r);
+            this.drawPrinter(ctx, x, y);
+            break;
+          case POTTED_TREE:
+            this.drawFloor(ctx, x, y, c, r);
+            this.drawPottedTree(ctx, x, y);
+            break;
+          case TRASH_CAN:
+            this.drawFloor(ctx, x, y, c, r);
+            this.drawTrashCan(ctx, x, y);
+            break;
+          case FILING_CABINET:
+            this.drawFloor(ctx, x, y, c, r);
+            this.drawFilingCabinet(ctx, x, y);
             break;
           default:
             this.drawFloor(ctx, x, y, c, r);
@@ -501,6 +526,16 @@ export class Renderer {
     ctx.fillStyle = '#44aa44';
     ctx.fillRect(x + 5, y + 13, 6, 1);
 
+    // Colored sticky notes
+    ctx.fillStyle = '#ffee44'; // yellow sticky
+    ctx.fillRect(x + 14, y + 4, 5, 4);
+    ctx.fillStyle = '#ff88aa'; // pink sticky
+    ctx.fillRect(x + 15, y + 9, 4, 4);
+    ctx.fillStyle = '#88ddff'; // blue sticky
+    ctx.fillRect(x + 7, y + 12, 4, 3);
+    ctx.fillStyle = '#88ff88'; // green sticky
+    ctx.fillRect(x + 12, y + 12, 4, 3);
+
     // Marker tray
     ctx.fillStyle = '#aaaaaa';
     ctx.fillRect(x + 3, y + 18, 18, 3);
@@ -651,6 +686,268 @@ export class Renderer {
     ctx.fillRect(x + 16, y + 9, 4, 3);
     ctx.fillStyle = '#32CD32';
     ctx.fillRect(x + 17, y + 8, 2, 2);
+  }
+
+  private drawCoffeeMachine(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+    // Shadow on floor
+    ctx.fillStyle = 'rgba(0,0,0,0.08)';
+    ctx.fillRect(x + 4, y + 21, 16, 3);
+
+    // Machine body (dark grey)
+    ctx.fillStyle = '#555566';
+    ctx.fillRect(x + 4, y + 4, 16, 18);
+    // Front panel (lighter)
+    ctx.fillStyle = '#666677';
+    ctx.fillRect(x + 5, y + 5, 14, 16);
+    // Top
+    ctx.fillStyle = '#444455';
+    ctx.fillRect(x + 4, y + 3, 16, 2);
+
+    // Hot plate area
+    ctx.fillStyle = '#333344';
+    ctx.fillRect(x + 6, y + 14, 12, 6);
+
+    // Coffee cup on hot plate
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x + 9, y + 15, 6, 5);
+    ctx.fillStyle = '#dddddd';
+    ctx.fillRect(x + 14, y + 16, 2, 3); // handle
+
+    // Coffee inside cup
+    ctx.fillStyle = '#4a2a0a';
+    ctx.fillRect(x + 10, y + 16, 4, 2);
+
+    // Steam animation
+    const now = performance.now();
+    const steamPhase = Math.sin(now * 0.004) * 2;
+    ctx.fillStyle = 'rgba(200,200,200,0.4)';
+    ctx.fillRect(x + 10 + steamPhase, y + 12, 1, 3);
+    ctx.fillRect(x + 13 - steamPhase, y + 11, 1, 4);
+
+    // Water reservoir (blue tinted)
+    ctx.fillStyle = '#5577aa';
+    ctx.fillRect(x + 6, y + 5, 12, 6);
+    ctx.fillStyle = '#6688bb';
+    ctx.fillRect(x + 7, y + 6, 10, 4);
+
+    // Control panel lights
+    ctx.fillStyle = '#00ff44'; // green = ready
+    ctx.fillRect(x + 7, y + 12, 2, 2);
+    // Red indicator
+    const blink = Math.sin(now * 0.003) > 0;
+    ctx.fillStyle = blink ? '#ff3333' : '#661111';
+    ctx.fillRect(x + 11, y + 12, 2, 2);
+  }
+
+  private drawSofa(ctx: CanvasRenderingContext2D, x: number, y: number, c: number): void {
+    // The sofa spans 3 tiles (c 21-23). Draw based on position.
+    const sofaStartCol = 21;
+    const localCol = c - sofaStartCol; // 0, 1, or 2
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.08)';
+    ctx.fillRect(x, y + 21, T, 3);
+
+    // Seat cushion (dark red/brown)
+    ctx.fillStyle = '#8B3A3A';
+    ctx.fillRect(x, y + 10, T, 10);
+
+    // Cushion highlight
+    ctx.fillStyle = '#9B4A4A';
+    ctx.fillRect(x + 2, y + 11, T - 4, 4);
+
+    // Cushion seam
+    ctx.fillStyle = '#7A2A2A';
+    ctx.fillRect(x, y + 16, T, 1);
+
+    // Back rest
+    ctx.fillStyle = '#7A2A2A';
+    ctx.fillRect(x, y + 2, T, 9);
+    ctx.fillStyle = '#8B3A3A';
+    ctx.fillRect(x + 2, y + 3, T - 4, 7);
+
+    // Arm rests on ends
+    if (localCol === 0) {
+      // Left arm
+      ctx.fillStyle = '#6A1A1A';
+      ctx.fillRect(x, y + 4, 4, 16);
+      ctx.fillStyle = '#7A2A2A';
+      ctx.fillRect(x, y + 4, 4, 3);
+    }
+    if (localCol === 2) {
+      // Right arm
+      ctx.fillStyle = '#6A1A1A';
+      ctx.fillRect(x + T - 4, y + 4, 4, 16);
+      ctx.fillStyle = '#7A2A2A';
+      ctx.fillRect(x + T - 4, y + 4, 4, 3);
+    }
+
+    // Legs
+    ctx.fillStyle = '#4A1A1A';
+    if (localCol === 0) {
+      ctx.fillRect(x + 2, y + 20, 3, 3);
+    }
+    if (localCol === 2) {
+      ctx.fillRect(x + T - 5, y + 20, 3, 3);
+    }
+
+    // Decorative cushion on middle section
+    if (localCol === 1) {
+      ctx.fillStyle = '#CC8844';
+      ctx.fillRect(x + 6, y + 5, 12, 6);
+      ctx.fillStyle = '#DD9955';
+      ctx.fillRect(x + 7, y + 6, 10, 4);
+    }
+  }
+
+  private drawPrinter(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.08)';
+    ctx.fillRect(x + 2, y + 20, 20, 4);
+
+    // Main body (grey box)
+    ctx.fillStyle = '#aaaaaa';
+    ctx.fillRect(x + 2, y + 8, 20, 14);
+    // Top panel
+    ctx.fillStyle = '#bbbbbb';
+    ctx.fillRect(x + 2, y + 8, 20, 3);
+    // Front
+    ctx.fillStyle = '#999999';
+    ctx.fillRect(x + 3, y + 12, 18, 8);
+
+    // Paper input tray (top)
+    ctx.fillStyle = '#cccccc';
+    ctx.fillRect(x + 4, y + 4, 16, 5);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x + 5, y + 5, 14, 3); // paper sheets
+
+    // Paper output tray (front slot)
+    ctx.fillStyle = '#333333';
+    ctx.fillRect(x + 5, y + 13, 14, 2);
+    // Paper coming out
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x + 6, y + 14, 12, 4);
+    // Text on paper
+    ctx.fillStyle = '#aaaaaa';
+    ctx.fillRect(x + 8, y + 15, 8, 1);
+    ctx.fillRect(x + 8, y + 17, 6, 1);
+
+    // Control panel
+    ctx.fillStyle = '#666666';
+    ctx.fillRect(x + 14, y + 9, 6, 3);
+    // Blinking green light
+    const blink = Math.sin(performance.now() * 0.002) > 0;
+    ctx.fillStyle = blink ? '#00ff44' : '#008822';
+    ctx.fillRect(x + 18, y + 10, 2, 1);
+  }
+
+  private drawPottedTree(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+    // Shadow on floor
+    ctx.fillStyle = 'rgba(0,0,0,0.1)';
+    ctx.fillRect(x + 2, y + 20, 20, 4);
+
+    // Large pot
+    ctx.fillStyle = '#8B5E3C';
+    ctx.fillRect(x + 5, y + 14, 14, 9);
+    ctx.fillStyle = '#9B6E4C';
+    ctx.fillRect(x + 4, y + 13, 16, 3);
+    // Pot rim
+    ctx.fillStyle = '#7A4E2C';
+    ctx.fillRect(x + 4, y + 13, 16, 1);
+
+    // Soil
+    ctx.fillStyle = '#4a2a0a';
+    ctx.fillRect(x + 6, y + 13, 12, 2);
+
+    // Trunk
+    ctx.fillStyle = '#6B4226';
+    ctx.fillRect(x + 10, y + 4, 4, 10);
+    ctx.fillStyle = '#5B3216';
+    ctx.fillRect(x + 10, y + 4, 1, 10);
+
+    // Canopy (larger than regular plant — extends above tile)
+    ctx.fillStyle = '#1a7a1a';
+    ctx.fillRect(x + 2, y - 6, 20, 14);
+    ctx.fillStyle = '#228B22';
+    ctx.fillRect(x + 4, y - 8, 16, 12);
+    // Top canopy
+    ctx.fillStyle = '#2a9a2a';
+    ctx.fillRect(x + 6, y - 10, 12, 8);
+
+    // Leaf highlights
+    ctx.fillStyle = '#44cc44';
+    ctx.fillRect(x + 6, y - 7, 5, 4);
+    ctx.fillRect(x + 14, y - 5, 4, 3);
+    ctx.fillRect(x + 8, y - 2, 3, 3);
+
+    // Dark spots
+    ctx.fillStyle = '#0a5a0a';
+    ctx.fillRect(x + 3, y + 1, 4, 4);
+    ctx.fillRect(x + 16, y - 3, 4, 5);
+  }
+
+  private drawTrashCan(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.06)';
+    ctx.fillRect(x + 7, y + 20, 10, 3);
+
+    // Bin body (grey)
+    ctx.fillStyle = '#888888';
+    ctx.fillRect(x + 8, y + 10, 8, 12);
+    // Slightly wider rim
+    ctx.fillStyle = '#999999';
+    ctx.fillRect(x + 7, y + 9, 10, 2);
+    // Bin bottom
+    ctx.fillStyle = '#777777';
+    ctx.fillRect(x + 9, y + 20, 6, 2);
+
+    // Some crumpled paper sticking out
+    ctx.fillStyle = '#ddddcc';
+    ctx.fillRect(x + 9, y + 8, 4, 3);
+    ctx.fillStyle = '#eeeecc';
+    ctx.fillRect(x + 13, y + 7, 3, 3);
+  }
+
+  private drawFilingCabinet(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.08)';
+    ctx.fillRect(x + 2, y + 22, 20, 2);
+
+    // Cabinet body (dark grey/beige)
+    ctx.fillStyle = '#8a8a7a';
+    ctx.fillRect(x + 3, y + 2, 18, 20);
+    // Side shadow
+    ctx.fillStyle = '#7a7a6a';
+    ctx.fillRect(x + 19, y + 2, 2, 20);
+
+    // Top edge
+    ctx.fillStyle = '#9a9a8a';
+    ctx.fillRect(x + 3, y + 1, 18, 2);
+
+    // Drawer 1
+    ctx.fillStyle = '#9a9a8a';
+    ctx.fillRect(x + 4, y + 3, 16, 5);
+    ctx.fillStyle = '#6a6a5a';
+    ctx.fillRect(x + 4, y + 8, 16, 1); // divider line
+    // Handle
+    ctx.fillStyle = '#aaaaaa';
+    ctx.fillRect(x + 10, y + 5, 4, 2);
+
+    // Drawer 2
+    ctx.fillStyle = '#9a9a8a';
+    ctx.fillRect(x + 4, y + 9, 16, 5);
+    ctx.fillStyle = '#6a6a5a';
+    ctx.fillRect(x + 4, y + 14, 16, 1);
+    // Handle
+    ctx.fillStyle = '#aaaaaa';
+    ctx.fillRect(x + 10, y + 11, 4, 2);
+
+    // Drawer 3
+    ctx.fillStyle = '#9a9a8a';
+    ctx.fillRect(x + 4, y + 15, 16, 6);
+    // Handle
+    ctx.fillStyle = '#aaaaaa';
+    ctx.fillRect(x + 10, y + 17, 4, 2);
   }
 
   private drawRug(ctx: CanvasRenderingContext2D, x: number, y: number, c: number, r: number): void {
@@ -858,6 +1155,20 @@ export class Renderer {
     } else {
       // Fallback: draw simple rectangles
       this.drawCharFallback(ctx, char, x, y);
+    }
+
+    // Coffee cup in hand when at the coffee machine
+    if (isAtCoffeeMachine(char)) {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x + 20, y + 4, 5, 5);
+      ctx.fillStyle = '#dddddd';
+      ctx.fillRect(x + 24, y + 5, 2, 3); // handle
+      ctx.fillStyle = '#4a2a0a';
+      ctx.fillRect(x + 21, y + 5, 3, 2); // coffee
+      // Steam
+      const steamP = Math.sin(performance.now() * 0.005) * 1.5;
+      ctx.fillStyle = 'rgba(200,200,200,0.5)';
+      ctx.fillRect(x + 22 + steamP, y + 2, 1, 2);
     }
 
     // Error overlay -- shake effect

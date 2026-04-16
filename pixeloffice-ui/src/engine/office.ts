@@ -12,6 +12,12 @@ export const COAT_RACK = 9;
 export const COFFEE_TABLE = 10;
 export const BASEBOARD = 11;
 export const LIGHT_RAY = 12; // floor tile with window light ray
+export const COFFEE_MACHINE = 13;
+export const SOFA = 14;
+export const PRINTER = 15;
+export const POTTED_TREE = 16;
+export const TRASH_CAN = 17;
+export const FILING_CABINET = 18;
 
 export const TILE_SIZE = 24;
 export const OFFICE_COLS = 28;
@@ -40,6 +46,10 @@ export const SEATS: Seat[] = [
 ];
 
 export type TileMap = number[][];
+
+// Behavior target positions (exported for characters.ts)
+export const COFFEE_MACHINE_POS = { col: 7, row: 16 };
+export const WINDOW_ROWS = [1, 2]; // wall rows where windows are
 
 // Window column ranges for light ray computation
 const WINDOW_RANGES = [
@@ -99,7 +109,7 @@ export function buildTileMap(): TileMap {
         } else if (r === 3 && c === 2) {
           row.push(PLANT);
         } else if (r === 3 && c === OFFICE_COLS - 3) {
-          row.push(PLANT);
+          row.push(POTTED_TREE); // taller tree instead of regular plant
         } else if (r === 15 && c === 2) {
           row.push(PLANT);
         } else if (r === 15 && c === OFFICE_COLS - 3) {
@@ -114,6 +124,30 @@ export function buildTileMap(): TileMap {
           row.push(COAT_RACK);
         } else if (r === 16 && (c >= 11 && c <= 13)) {
           row.push(COFFEE_TABLE);
+        // Coffee machine
+        } else if (r === COFFEE_MACHINE_POS.row && c === COFFEE_MACHINE_POS.col) {
+          row.push(COFFEE_MACHINE);
+        // Sofa area (bottom-right, 3 tiles wide)
+        } else if (r === 17 && c >= 21 && c <= 23) {
+          row.push(SOFA);
+        // Printer near the door area
+        } else if (r === 18 && c === 14) {
+          row.push(PRINTER);
+        // Potted tree (left side, taller)
+        } else if (r === 10 && c === 2) {
+          row.push(POTTED_TREE);
+        // Trash cans near each desk row
+        } else if (r === 8 && c === 8) {
+          row.push(TRASH_CAN);
+        } else if (r === 8 && c === 20) {
+          row.push(TRASH_CAN);
+        } else if (r === 14 && c === 8) {
+          row.push(TRASH_CAN);
+        } else if (r === 14 && c === 20) {
+          row.push(TRASH_CAN);
+        // Filing cabinets near the wall
+        } else if (r === 3 && (c === 20 || c === 21)) {
+          row.push(FILING_CABINET);
         } else if (isLightRayTile(r, c)) {
           row.push(LIGHT_RAY);
         } else {

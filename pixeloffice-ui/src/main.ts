@@ -2,11 +2,12 @@ import type { PixelEvent, AgentState } from './types';
 import { WsClient } from './ws/client';
 import { GameLoop } from './engine/gameLoop';
 import { buildTileMap, getSeat, getSeatCount } from './engine/office';
-import { createCharacter, updateCharacter, applyStatus, type Character } from './engine/characters';
+import { createCharacter, updateCharacter, applyStatus, setCharactersRef, type Character } from './engine/characters';
 import { Renderer } from './engine/renderer';
 
 // --- State ---
 const agents = new Map<string, Character>();
+setCharactersRef(agents); // share with behavior system for neighbor lookups
 let seatIndex = 0;
 const tileMap = buildTileMap();
 
