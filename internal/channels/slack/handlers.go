@@ -84,8 +84,11 @@ func (c *Channel) handleMessage(ev *slackevents.MessageEvent) {
 		}
 	}
 
-	// Explicit dedup: prevent duplicate processing on Socket Mode reconnect
-	dedupKey := ev.Channel + ":" + ev.TimeStamp
+	// Explicit dedup: prevent duplicate processing on Socket Mode reconnect.
+	// message_changed events get a key that includes event_ts, so in-place edits
+	// (e.g. bot placeholder "Thinking..." → "<@BOT> hello") don't collide with
+	// the original post's dedup entry and get silently dropped.
+	dedupKey := dedupKeyForEvent(ev.Channel, ev.TimeStamp, ev.EventTimeStamp, ev.SubType)
 	if _, loaded := c.dedup.LoadOrStore(dedupKey, time.Now()); loaded {
 		return
 	}

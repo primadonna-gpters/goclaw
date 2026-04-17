@@ -140,6 +140,31 @@ func TestResolveMentionGate_BotMessageBypassesParticipCache(t *testing.T) {
 	}
 }
 
+// --- dedupKeyForEvent ---
+
+func TestDedupKey_RegularMessage(t *testing.T) {
+	// Regular post: use its own ts as dedup key.
+	key := dedupKeyForEvent("C1", "1776405412.543389", "1776405412.543389", "")
+	want := "C1:1776405412.543389"
+	if key != want {
+		t.Errorf("regular msg dedupKey = %q, want %q", key, want)
+	}
+}
+
+func TestDedupKey_MessageChangedDistinctFromOriginal(t *testing.T) {
+	// Regression for bot placeholder → edit bug (DEV-3532):
+	// bot posts "Thinking..." at ts X, then edits to include @bot at event_ts Y.
+	// If both events share the same dedup key, the edit is dropped and the
+	// @mention never reaches the gate. Message_changed MUST include event_ts
+	// so the edit gets its own entry.
+	origKey := dedupKeyForEvent("C1", "1776405412.543389", "1776405412.543389", "")
+	editKey := dedupKeyForEvent("C1", "1776405412.543389", "1776405420.100001", "message_changed")
+
+	if origKey == editKey {
+		t.Fatalf("message_changed dedup key must differ from original; both = %q", origKey)
+	}
+}
+
 // --- resolveDisplayName cache ---
 
 func TestResolveDisplayNameCacheHit(t *testing.T) {

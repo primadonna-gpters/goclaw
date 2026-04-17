@@ -111,6 +111,24 @@ func (c *Channel) isBotMentioned(text string) bool {
 	return strings.Contains(text, "<@"+c.botUserID+">")
 }
 
+// dedupKeyForEvent builds the dedup key for a Slack message event, ensuring that
+// message_changed events get a key distinct from the original message post. Without
+// this, a bot that posts a placeholder ("Thinking...") and then edits it in-place
+// to include an @mention would lose the edit: the original post's ts is stored in
+// dedup on arrival, then the message_changed event (which Slack delivers with the
+// SAME underlying message.ts) collides and gets dropped — so the new @mention
+// never reaches the gate.
+//
+// For message_changed, we include event_ts (the edit-event's own timestamp, which
+// differs from message.ts) in the key. For regular posts, the original scheme of
+// (channel, ts) stands.
+func dedupKeyForEvent(channelID, messageTS, eventTS, subType string) string {
+	if subType == "message_changed" && eventTS != "" {
+		return channelID + ":" + messageTS + "#edit:" + eventTS
+	}
+	return channelID + ":" + messageTS
+}
+
 // resolveMentionGate decides whether a group-channel message should proceed to
 // LLM processing. The caller MUST pass the raw posted text — the text the sender
 // actually typed — NOT content augmented with thread-parent reply context, media
