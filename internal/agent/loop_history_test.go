@@ -94,6 +94,83 @@ func TestLimitHistoryTurns_LimitExceedsTotal(t *testing.T) {
 	}
 }
 
+func TestFilterSilentReplies_DropsNoReplyAssistant(t *testing.T) {
+	msgs := []providers.Message{
+		{Role: "user", Content: "hey bots"},
+		{Role: "assistant", Content: "NO_REPLY"},
+		{Role: "user", Content: "still there?"},
+		{Role: "assistant", Content: "yes, here"},
+	}
+	got := filterSilentReplies(msgs)
+
+	if len(got) != 3 {
+		t.Fatalf("expected 3 messages (silent assistant dropped), got %d: %+v", len(got), got)
+	}
+	if got[0].Content != "hey bots" || got[0].Role != "user" {
+		t.Errorf("msg[0] = %+v, want user/hey bots", got[0])
+	}
+	if got[1].Content != "still there?" || got[1].Role != "user" {
+		t.Errorf("msg[1] = %+v, want user/still there?", got[1])
+	}
+	if got[2].Content != "yes, here" || got[2].Role != "assistant" {
+		t.Errorf("msg[2] = %+v, want assistant/yes, here", got[2])
+	}
+}
+
+func TestFilterSilentReplies_KeepsAssistantWithToolCalls(t *testing.T) {
+	// Defensive: don't drop if the assistant message carries tool_calls, even if
+	// content happens to match NO_REPLY. Preserves tool_use/tool_result pairing.
+	msgs := []providers.Message{
+		{Role: "user", Content: "do the thing"},
+		{Role: "assistant", Content: "NO_REPLY", ToolCalls: []providers.ToolCall{{ID: "tc1", Name: "read_file"}}},
+		{Role: "tool", Content: "result", ToolCallID: "tc1"},
+	}
+	got := filterSilentReplies(msgs)
+
+	if len(got) != 3 {
+		t.Fatalf("expected 3 messages preserved, got %d", len(got))
+	}
+}
+
+func TestFilterSilentReplies_Empty(t *testing.T) {
+	got := filterSilentReplies(nil)
+	if len(got) != 0 {
+		t.Errorf("expected empty, got %d", len(got))
+	}
+}
+
+func TestFilterSilentReplies_ThenSanitize_MergesConsecutiveUsers(t *testing.T) {
+	// After filtering silent assistant turns, consecutive user turns should be
+	// merged by sanitizeHistory so Claude API role alternation is preserved.
+	msgs := []providers.Message{
+		{Role: "user", Content: "first question"},
+		{Role: "assistant", Content: "NO_REPLY"},
+		{Role: "user", Content: "second question"},
+		{Role: "assistant", Content: "NO_REPLY"},
+		{Role: "user", Content: "third question"},
+		{Role: "assistant", Content: "ok answering now"},
+	}
+
+	filtered := filterSilentReplies(msgs)
+	sanitized, _ := sanitizeHistory(filtered)
+
+	if len(sanitized) != 2 {
+		t.Fatalf("expected 2 messages (merged-user + assistant), got %d: %+v", len(sanitized), sanitized)
+	}
+	if sanitized[0].Role != "user" {
+		t.Errorf("sanitized[0].Role = %s, want user", sanitized[0].Role)
+	}
+	// Merged content should contain all three user questions.
+	for _, want := range []string{"first question", "second question", "third question"} {
+		if !strings.Contains(sanitized[0].Content, want) {
+			t.Errorf("merged user content missing %q; got: %s", want, sanitized[0].Content)
+		}
+	}
+	if sanitized[1].Role != "assistant" || sanitized[1].Content != "ok answering now" {
+		t.Errorf("sanitized[1] = %+v, want assistant/ok answering now", sanitized[1])
+	}
+}
+
 func TestSanitizeHistory_Empty(t *testing.T) {
 	got, _ := sanitizeHistory(nil)
 	if len(got) != 0 {

@@ -39,6 +39,29 @@ func limitHistoryTurns(msgs []providers.Message, limit int) []providers.Message 
 	return msgs
 }
 
+// filterSilentReplies removes assistant turns whose content is a NO_REPLY sentinel.
+// These turns are persisted to session for audit (finalize_stage.go saves them even
+// when suppressed), but including them in the prompt history causes a self-reinforcing
+// silence loop: the LLM sees its own past NO_REPLYs and pattern-matches to keep saying
+// NO_REPLY even when the user directly addresses it.
+//
+// Assistant turns carrying tool_calls or MediaRefs are preserved regardless of text
+// content so tool_use/tool_result pairing and attached media stay intact. The resulting
+// consecutive user turns are merged into one by sanitizeHistory's role-alternation fix.
+func filterSilentReplies(msgs []providers.Message) []providers.Message {
+	if len(msgs) == 0 {
+		return msgs
+	}
+	result := make([]providers.Message, 0, len(msgs))
+	for _, m := range msgs {
+		if m.Role == "assistant" && len(m.ToolCalls) == 0 && len(m.MediaRefs) == 0 && IsSilentReply(m.Content) {
+			continue
+		}
+		result = append(result, m)
+	}
+	return result
+}
+
 // sanitizeHistory repairs tool_use/tool_result pairing in session history.
 // Matching TS session-transcript-repair.ts sanitizeToolUseResultPairing().
 //

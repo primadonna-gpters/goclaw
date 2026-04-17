@@ -258,9 +258,13 @@ func (l *Loop) buildMessages(ctx context.Context, history []providers.Message, s
 		})
 	}
 
-	// History pipeline: limitHistoryTurns → sanitizeHistory.
+	// History pipeline: limitHistoryTurns → filterSilentReplies → sanitizeHistory.
+	// filterSilentReplies strips prior NO_REPLY assistant turns so they don't
+	// train the LLM to keep replying with NO_REPLY in a self-reinforcing loop.
+	// sanitizeHistory merges the resulting consecutive user turns.
 	// Pruning is owned by PruneStage in the pipeline (single entry point).
 	trimmed := limitHistoryTurns(history, historyLimit)
+	trimmed = filterSilentReplies(trimmed)
 	sanitized, droppedCount := sanitizeHistory(trimmed)
 	messages = append(messages, sanitized...)
 
