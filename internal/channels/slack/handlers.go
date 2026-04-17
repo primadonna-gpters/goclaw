@@ -93,6 +93,11 @@ func (c *Channel) handleMessage(ev *slackevents.MessageEvent) {
 	senderID := ev.User
 	channelID := ev.Channel
 	content := normalizeIncomingText(ev.Text)
+	// Capture raw posted text BEFORE any augmentation (media doc extraction,
+	// thread-parent reply context) so the mention gate sees only what the sender
+	// actually typed. Using augmented content causes bot-to-bot amplification in
+	// @-mention threads — see resolveMentionGate doc.
+	mentionRawText := content
 
 	isDM := ev.ChannelType == "im"
 	peerKind := "group"
@@ -177,33 +182,11 @@ func (c *Channel) handleMessage(ev *slackevents.MessageEvent) {
 	}
 	localKey := slackLocalKey(channelID, threadTS)
 
-	// Mention gating in groups (with thread participation cache).
-	// For foreign bot messages we force strict mention gating: ignore the
-	// thread participation cache so bot-to-bot loops cannot self-perpetuate.
+	// Mention gating in groups. Uses raw posted text (mentionRawText) only —
+	// augmented content (thread-parent reply context, media doc extraction) must
+	// not feed the gate, or bots echoing in a mention-thread loop forever.
 	if !isDM && c.RequireMention() {
-		mentioned := c.isBotMentioned(content)
-
-		// If the message explicitly mentions a *different* user/bot, defer to
-		// them: skip thread participation auto-reply so multi-agent channels
-		// don't have every previously-participating bot piling on.
-		hasOtherMention := !mentioned && containsOtherUserMention(content, c.botUserID)
-
-		// Thread participation cache: auto-reply in threads where bot previously participated
-		// (sender is human only — bot senders must always re-mention explicitly).
-		if !mentioned && !isBotMessage && !hasOtherMention && threadTS != "" && c.threadTTL > 0 {
-			participKey := channelID + ":particip:" + threadTS
-			if lastReply, ok := c.threadParticip.Load(participKey); ok {
-				if time.Since(lastReply.(time.Time)) < c.threadTTL {
-					mentioned = true
-					slog.Debug("slack: auto-reply in participated thread",
-						"channel_id", channelID, "thread_ts", threadTS)
-				} else {
-					c.threadParticip.Delete(participKey)
-				}
-			}
-		}
-
-		if !mentioned {
+		if !c.resolveMentionGate(mentionRawText, isBotMessage, threadTS, channelID) {
 			c.GroupHistory().Record(localKey, channels.HistoryEntry{
 				Sender:    displayName,
 				SenderID:  senderID,

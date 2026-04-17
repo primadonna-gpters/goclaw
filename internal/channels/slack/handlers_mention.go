@@ -111,6 +111,36 @@ func (c *Channel) isBotMentioned(text string) bool {
 	return strings.Contains(text, "<@"+c.botUserID+">")
 }
 
+// resolveMentionGate decides whether a group-channel message should proceed to
+// LLM processing. The caller MUST pass the raw posted text — the text the sender
+// actually typed — NOT content augmented with thread-parent reply context, media
+// doc extraction, or any other injection. Using augmented content causes a bot-to-bot
+// amplification loop in @-mention threads: every foreign-bot reply in the thread
+// would appear to re-mention us via the parent reply context and re-trigger.
+//
+// isBotMessage=true (foreign bot post) skips the thread-participation auto-reply
+// cache unconditionally. Thread participation rescue applies only to human senders.
+func (c *Channel) resolveMentionGate(rawText string, isBotMessage bool, threadTS, channelID string) bool {
+	mentioned := c.isBotMentioned(rawText)
+	if mentioned {
+		return true
+	}
+	hasOtherMention := containsOtherUserMention(rawText, c.botUserID)
+	if hasOtherMention || isBotMessage || threadTS == "" || c.threadTTL <= 0 {
+		return false
+	}
+	participKey := channelID + ":particip:" + threadTS
+	lastReply, ok := c.threadParticip.Load(participKey)
+	if !ok {
+		return false
+	}
+	if time.Since(lastReply.(time.Time)) >= c.threadTTL {
+		c.threadParticip.Delete(participKey)
+		return false
+	}
+	return true
+}
+
 // stripBotMention removes <@botUserID> from message text.
 func (c *Channel) stripBotMention(text string) string {
 	return strings.ReplaceAll(text, "<@"+c.botUserID+">", "")

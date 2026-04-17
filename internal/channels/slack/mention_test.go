@@ -67,6 +67,79 @@ func TestStripBotMention(t *testing.T) {
 	}
 }
 
+// --- resolveMentionGate ---
+
+func TestResolveMentionGate_DirectMention(t *testing.T) {
+	ch := &Channel{
+		BaseChannel: channels.NewBaseChannel(channels.TypeSlack, nil, nil),
+		botUserID:   "U12345",
+		threadTTL:   24 * time.Hour,
+	}
+	if !ch.resolveMentionGate("<@U12345> hi", false, "", "C1") {
+		t.Error("direct @-mention should pass gate")
+	}
+}
+
+func TestResolveMentionGate_NoMention(t *testing.T) {
+	ch := &Channel{
+		BaseChannel: channels.NewBaseChannel(channels.TypeSlack, nil, nil),
+		botUserID:   "U12345",
+		threadTTL:   24 * time.Hour,
+	}
+	if ch.resolveMentionGate("just chatting", false, "", "C1") {
+		t.Error("no mention, no thread cache → should not pass gate")
+	}
+}
+
+func TestResolveMentionGate_BotPostInMentionThreadNotTriggered(t *testing.T) {
+	// Core regression test for the bot-to-bot amplification loop (DEV-3532):
+	// another bot posts a "Thinking..." placeholder in a thread whose root
+	// message @-mentions us. The raw posted text ("Thinking...") has no mention;
+	// it's only the thread-parent reply context that contains our ID.
+	// Mention gate must use raw text only, NOT augmented content.
+	ch := &Channel{
+		BaseChannel: channels.NewBaseChannel(channels.TypeSlack, nil, nil),
+		botUserID:   "U12345",
+		threadTTL:   24 * time.Hour,
+	}
+	// isBotMessage=true (post from another bot). threadTTL positive but no
+	// prior participation cache set, so cache can't rescue either.
+	if ch.resolveMentionGate("Thinking...", true, "1776403297.533289", "C1") {
+		t.Error("foreign bot post in thread without our raw-text mention must not pass gate")
+	}
+}
+
+func TestResolveMentionGate_HumanInParticipatedThread(t *testing.T) {
+	// Human reply in a thread where we previously participated → cache hit, pass.
+	ch := &Channel{
+		BaseChannel: channels.NewBaseChannel(channels.TypeSlack, nil, nil),
+		botUserID:   "U12345",
+		threadTTL:   24 * time.Hour,
+	}
+	participKey := "C1:particip:1.0"
+	ch.threadParticip.Store(participKey, time.Now())
+
+	if !ch.resolveMentionGate("follow up question", false, "1.0", "C1") {
+		t.Error("human reply in participated thread should pass gate via cache")
+	}
+}
+
+func TestResolveMentionGate_BotMessageBypassesParticipCache(t *testing.T) {
+	// Even with a participated thread, foreign-bot posts must NOT pass via cache.
+	// Prevents two bots who both participated once from echoing forever.
+	ch := &Channel{
+		BaseChannel: channels.NewBaseChannel(channels.TypeSlack, nil, nil),
+		botUserID:   "U12345",
+		threadTTL:   24 * time.Hour,
+	}
+	participKey := "C1:particip:1.0"
+	ch.threadParticip.Store(participKey, time.Now())
+
+	if ch.resolveMentionGate("Thinking...", true, "1.0", "C1") {
+		t.Error("foreign bot in participated thread must not pass gate")
+	}
+}
+
 // --- resolveDisplayName cache ---
 
 func TestResolveDisplayNameCacheHit(t *testing.T) {
