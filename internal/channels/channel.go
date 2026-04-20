@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"unicode/utf8"
 	"sync"
 	"time"
 
@@ -642,10 +643,18 @@ type PendingCompactable interface {
 	SetPendingCompaction(cfg *CompactionConfig)
 }
 
-// Truncate shortens a string to maxLen, appending "..." if truncated.
+// Truncate shortens a string to maxLen bytes, appending "..." if truncated.
+// Safe for multi-byte UTF-8: backs off to the nearest rune boundary so the
+// result is never an invalid byte sequence (which would blow up Postgres
+// INSERTs on UTF-8-encoded columns).
 func Truncate(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s
 	}
-	return s[:maxLen] + "..."
+	cut := maxLen
+	// utf8.RuneStart is true for bytes that begin a rune; back up until we hit one.
+	for cut > 0 && !utf8.RuneStart(s[cut]) {
+		cut--
+	}
+	return s[:cut] + "..."
 }

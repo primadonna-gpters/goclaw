@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/mymmrac/telego"
+
+	"github.com/nextlevelbuilder/goclaw/internal/channels"
 )
 
 // MessageContext holds enriched context extracted from a Telegram message.
@@ -140,10 +142,8 @@ func extractReplyInfo(msg *telego.Message, botUsername string) *ReplyInfo {
 		info.Body = reply.Caption
 	}
 
-	// Truncate long reply bodies
-	if len(info.Body) > 500 {
-		info.Body = info.Body[:500] + "..."
-	}
+	// Truncate long reply bodies (UTF-8 safe via channels.Truncate).
+	info.Body = channels.Truncate(info.Body, 500)
 
 	// Hint for bot replies: the full response is already in session history,
 	// so the LLM doesn't need the full text here — just enough to identify it.

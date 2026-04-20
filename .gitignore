@@ -89,3 +89,4 @@ compose.d/*
 /mise
 /.mise
 goclaw-patched-linux-amd64
+internal/webui/dist/
