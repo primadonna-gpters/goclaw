@@ -165,6 +165,7 @@ export function AgentFilesTab({
           onSave={handleSave}
           headerActions={aiActions || undefined}
           contactSearchEnabled={isPredefined}
+          userScoped={selectedFile ? isUserScoped(selectedFile) : false}
         />
       </div>
 

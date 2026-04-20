@@ -18,6 +18,8 @@ interface FileEditorProps {
   headerActions?: ReactNode;
   /** Show contact search box for inserting contact snippets into the editor. */
   contactSearchEnabled?: boolean;
+  /** File is user-scoped (shared default edited here, per-user overrides in Instances tab). */
+  userScoped?: boolean;
 }
 
 export function FileEditor({
@@ -31,6 +33,7 @@ export function FileEditor({
   onSave,
   headerActions,
   contactSearchEnabled,
+  userScoped,
 }: FileEditorProps) {
   const { t } = useTranslation("agents");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -96,6 +99,11 @@ export function FileEditor({
           )}
         </div>
       </div>
+      {userScoped && (
+        <div className="mb-2 rounded-md border border-blue-500/30 bg-blue-500/5 px-3 py-2 text-xs text-blue-700 dark:text-blue-300">
+          {t("files.perUserHint")}
+        </div>
+      )}
       {contactSearchEnabled && canEdit && (
         <div className="mb-2">
           <ContactInsertSearch onInsert={handleInsertText} />
